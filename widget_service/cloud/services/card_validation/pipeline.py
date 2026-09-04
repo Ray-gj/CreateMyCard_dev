@@ -25,6 +25,17 @@ from .display_unit_validator import DisplayUnitValidator
 from .effective_capability_validator import EffectiveCapabilityValidator
 from .expression_validator import ExpressionValidator
 from .protocol_validator import ProtocolValidator
+from .quality.asset_quality_validator import AssetQualityValidator
+from .quality.color_validator import ColorValidator
+from .quality.copy_validator import CopyValidator
+from .quality.density_validator import DensityValidator
+from .quality.gradient_validator import GradientValidator
+from .quality.icon_validator import IconValidator
+from .quality.layout_2x4_validator import Layout2x4Validator
+from .quality.shape_validator import ShapeValidator
+from .quality.slot_validator import SlotValidator
+from .quality.spacing_validator import SpacingValidator
+from .quality.typography_validator import TypographyValidator
 
 STATIC_VALIDATORS = [
     ProtocolValidator(),
@@ -39,6 +50,17 @@ STATIC_VALIDATORS = [
 ]
 
 QUALITY_VALIDATORS = [
+    ColorValidator(),
+    GradientValidator(),
+    AssetQualityValidator(),
+    IconValidator(),
+    ShapeValidator(),
+    TypographyValidator(),
+    CopyValidator(),
+    SpacingValidator(),
+    SlotValidator(),
+    DensityValidator(),
+    Layout2x4Validator(),
     ContrastValidator(),
 ]
 
@@ -57,9 +79,8 @@ def selected_stages(stage: str) -> list[str]:
         return ["hard"]
     if stage == "semantic":
         return ["hard", "semantic"]
-    # "quality" and "all" both run every declared stage. The online variant has
-    # no quality-stage validators, so passing "quality" or "all" is functionally
-    # identical to passing "semantic".
+    # "quality" and "all" both run every declared stage, including the
+    # deterministic quality validators registered above.
     return ["hard", "semantic", "quality"]
 
 

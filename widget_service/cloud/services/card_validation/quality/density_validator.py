@@ -17,7 +17,8 @@ class DensityValidator(BaseValidator):
             for _, component in iter_components(context)
             if component.get("onClick") is not None and component.get("id") != context.root_id
         ]
-        limit = 2 if getattr(context, "card_size", None) == "2x4" else 1
+        suggest_size = context.cardspec.get("suggestSize")
+        limit = 2 if suggest_size == "2x4" else 1
         if len(actions) > limit:
             add(
                 reporter,

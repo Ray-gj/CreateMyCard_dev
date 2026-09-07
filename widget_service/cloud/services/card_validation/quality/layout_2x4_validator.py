@@ -12,7 +12,8 @@ class Layout2x4Validator(BaseValidator):
 
     def validate(self, context: Any, rules: Any, reporter: Any) -> None:
         del rules
-        if getattr(context, "card_size", None) != "2x4":
+        suggest_size = context.cardspec.get("suggestSize")
+        if suggest_size != "2x4":
             return
         by_id = context.components_by_id
         for index, component in enumerate(context.components):

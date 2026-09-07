@@ -11,6 +11,11 @@
 - 不要在 `AGENTS.md` 中新增或复制接口字段、协议细节、状态码、CardSpec、TaskSpec、Artifact、校验项等方案内容。
 - 方案变更应先同步 `docs/云侧方案设计.md`，再同步代码、Skill、测试和相关配置。
 
+## 项目知识索引
+
+- `agents.d/architecture-map.md`：校验链路的边界和内部数据流约束。
+- `agents.d/development-loop.md`：项目内可复用的生成、检查和测试命令。
+
 ## Python 编码与 CodeCheck 约束
 
 本节适用于项目内 Python 源码、测试、生成器和脚本。修改代码时按“业务语义正确、类型与异常语义稳定、

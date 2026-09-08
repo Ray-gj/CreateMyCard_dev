@@ -7,6 +7,10 @@
     "message": "字号不得低于 8vp。",
     "fixHint": "将字号调整为不低于 8vp 的可读字号。"
   },
+  "COLOR.INVALID_FORMAT": {
+    "message": "颜色必须使用 #AARRGGBB 格式。",
+    "fixHint": "将颜色改为包含 alpha 通道的八位十六进制 ARGB 值。"
+  },
   "DSL_JSONL_LINE_COUNT": {
     "message": "genui 必须是三行 JSONL。",
     "fixHint": "输出 createSurface、updateComponents、updateDataModel 三行 JSON。"

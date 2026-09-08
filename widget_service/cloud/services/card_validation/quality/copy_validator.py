@@ -3,28 +3,101 @@ from __future__ import annotations
 from typing import Any
 
 from ..base import BaseValidator
-from .common import add, component_pointer, iter_components
+from .common import add, component_pointer, display_text, iter_components
 
 
 class CopyValidator(BaseValidator):
     stage = "quality"
     name = "copy"
+    title_tokens = ("title", "header", "kicker")
 
     def validate(self, context: Any, rules: Any, reporter: Any) -> None:
-        del rules
+        suggest_size = context.cardspec.get("suggestSize")
+        default_action_limit = 8 if suggest_size == "2x4" else 6
+        action_limit = self._size_limit(
+            rules,
+            "maxActionLabelChars",
+            suggest_size,
+            default_action_limit,
+        )
+        title_limit = 8
+        if rules is not None:
+            configured_title_limit = rules.layout.get("titleMaxChars")
+            valid_title_limit = (
+                isinstance(configured_title_limit, int)
+                and not isinstance(configured_title_limit, bool)
+                and configured_title_limit > 0
+            )
+            if valid_title_limit:
+                title_limit = configured_title_limit
         for index, component in iter_components(context):
-            values = [("content", component.get("content")), ("label", component.get("label"))]
-            for key, value in values:
-                if not isinstance(value, str) or value.strip().startswith("{{"):
-                    continue
-                limit = 4 if key == "label" or component.get("onClick") is not None else 8
-                code = "COPY.ACTION_LABEL_MAX_CHARS" if limit == 4 else "COPY.TITLE_MAX_CHARS"
-                if len(value.strip()) > limit:
-                    add(
-                        reporter,
-                        code,
-                        component_pointer(index, key),
-                        "文案超过卡片设计长度限制。",
-                        len(value.strip()),
-                        f"<= {limit} 字",
-                    )
+            if component.get("component") == "Button":
+                self._check_value(
+                    reporter,
+                    index,
+                    "label",
+                    component.get("label"),
+                    context.data_model,
+                    action_limit,
+                    "COPY.ACTION_LABEL_MAX_CHARS",
+                )
+                continue
+            if component.get("component") != "Text":
+                continue
+            component_id = component.get("id")
+            is_title = isinstance(component_id, str) and any(
+                token in component_id.lower() for token in self.title_tokens
+            )
+            is_action = isinstance(component.get("onClick"), list) and component.get("onClick")
+            if not is_title and not is_action:
+                continue
+            limit = action_limit if is_action else title_limit
+            code = "COPY.ACTION_LABEL_MAX_CHARS" if is_action else "COPY.TITLE_MAX_CHARS"
+            self._check_value(
+                reporter,
+                index,
+                "content",
+                component.get("content"),
+                context.data_model,
+                limit,
+                code,
+            )
+
+    @staticmethod
+    def _check_value(
+        reporter: Any,
+        component_index: int,
+        field: str,
+        value: Any,
+        data_model: Any,
+        limit: int,
+        code: str,
+    ) -> None:
+        text = display_text(value, data_model)
+        if text is None or len(text) <= limit:
+            return
+        add(
+            reporter,
+            code,
+            component_pointer(component_index, field),
+            "文案超过卡片设计长度限制。",
+            len(text),
+            f"<= {limit} 字",
+        )
+
+    @staticmethod
+    def _size_limit(
+        rules: Any,
+        rule_name: str,
+        suggest_size: Any,
+        fallback: int,
+    ) -> int:
+        if rules is None or not isinstance(suggest_size, str):
+            return fallback
+        configured = rules.layout.get(rule_name)
+        if not isinstance(configured, dict):
+            return fallback
+        value = configured.get(suggest_size)
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            return value
+        return fallback

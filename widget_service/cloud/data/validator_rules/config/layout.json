@@ -1,6 +1,6 @@
 {
   "defaultPadding": 12,
-  "rootBorderRadius": 18,
+  "rootBorderRadius": [18, 20],
   "minButtonRadius": 18,
   "allowedFontSizes": [10, 12, 14, 16, 18, 20, 32, 40],
   "allowedFontWeights": [100, 200, 300, 400, 500, 600, 700, 800, 900],

@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from ..base import BaseValidator, numeric, spacing_tuple
-from .common import add, component_pointer, iter_components, quality_scene
+from .common import (
+    FUSION_BACKGROUND_ID,
+    FUSION_CONTENT_ID_PREFIX,
+    add,
+    component_pointer,
+    iter_components,
+)
 
 
 class SpacingValidator(BaseValidator):
@@ -15,11 +21,11 @@ class SpacingValidator(BaseValidator):
         configured_spacing = rules.layout.get("allowedSpacing") if rules is not None else None
         allowed = self.allowed
         if isinstance(configured_spacing, list):
-            values = {
-                float(value)
-                for value in configured_spacing
-                if isinstance(value, (int, float)) and not isinstance(value, bool)
-            }
+            values: set[float] = set()
+            for value in configured_spacing:
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    continue
+                values.add(float(value))
             if values:
                 allowed = frozenset(values)
         default_padding = 12
@@ -27,8 +33,7 @@ class SpacingValidator(BaseValidator):
             configured_padding = numeric(rules.layout.get("defaultPadding"))
             if configured_padding is not None:
                 default_padding = configured_padding
-        scene = quality_scene(context)
-        safe_root_id = scene.content_root.get("id") if scene is not None else context.root_id
+        safe_root_id = self._safe_root_id(context)
         for index, component in iter_components(context):
             styles = component.get("styles")
             if not isinstance(styles, dict):
@@ -74,6 +79,45 @@ class SpacingValidator(BaseValidator):
                 component.get(gap_field),
                 allowed,
             )
+
+    @staticmethod
+    def _safe_root_id(context: Any) -> str | None:
+        safe_root_id: str | None = context.root_id
+        root = context.components_by_id.get(safe_root_id)
+        if not isinstance(root, dict) or root.get("component") != "Stack":
+            return safe_root_id
+        children = root.get("children")
+        if not isinstance(children, list) or "root_0" in children:
+            return safe_root_id
+        foreground_ids = [child for child in children if child != FUSION_BACKGROUND_ID]
+        if len(foreground_ids) != 1:
+            return safe_root_id
+        foreground_id = foreground_ids[0]
+        if not isinstance(foreground_id, str):
+            return safe_root_id
+        foreground = context.components_by_id.get(foreground_id)
+        if not isinstance(foreground, dict):
+            return safe_root_id
+        if foreground.get("component") not in {"Row", "Column", "Stack"}:
+            return safe_root_id
+        is_fusion = FUSION_BACKGROUND_ID in children
+        is_template = SpacingValidator._is_template_foreground(foreground, context)
+        if is_fusion or is_template:
+            safe_root_id = foreground_id
+        return safe_root_id
+
+    @staticmethod
+    def _is_template_foreground(foreground: dict[str, Any], context: Any) -> bool:
+        if foreground.get("id") != "template_root" or foreground.get("component") != "Stack":
+            return False
+        children = foreground.get("children")
+        if not isinstance(children, list) or len(children) != 1:
+            return False
+        content_id = children[0]
+        if not isinstance(content_id, str) or not content_id.startswith(FUSION_CONTENT_ID_PREFIX):
+            return False
+        content = context.components_by_id.get(content_id)
+        return isinstance(content, dict) and content.get("component") in {"Row", "Column", "Stack"}
 
     @staticmethod
     def _matches_padding(value: Any, expected: float) -> bool:

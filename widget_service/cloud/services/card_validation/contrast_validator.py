@@ -210,9 +210,8 @@ class ContrastValidator(BaseValidator):
             if ratios:
                 ratio = _reported_contrast_ratio(ratios, is_gradient)
                 if ratio < 4.5:
-                    # 渐变 stop 只代表背景采样点，无法证明文本矩形整体不可读。
-                    # 渐变场景统一进入渲染复核；纯色背景继续按最低阈值阻塞。
-                    severity = "warning" if is_gradient else ("error" if ratio < 3 else "warning")
+                    severity = "error" if ratio < 3 else "warning"
+                    requires_render_review = is_gradient and severity == "warning"
                     component_id = component.get("id")
                     pointer = (
                         f"/updateComponents/componentsById/{component_id}/styles/{color_key}"
@@ -227,18 +226,18 @@ class ContrastValidator(BaseValidator):
                         actual=round(ratio, 2),
                         expected=(
                             ">= 3:1 after render review; >= 4.5:1 recommended"
-                            if is_gradient
+                            if requires_render_review
                             else ">= 3:1; >= 4.5:1 recommended"
                         ),
                         message=(
                             f"text contrast is {ratio:.2f}:1; gradient requires render review"
-                            if is_gradient
+                            if requires_render_review
                             else f"text contrast is {ratio:.2f}:1"
                         ),
                         fix_hint=(
                             "Confirm readability on the rendered gradient; adjust contrast "
                             "only if the text area is unclear."
-                            if is_gradient
+                            if requires_render_review
                             else "Use a stronger foreground color or adjust the background."
                         ),
                         source="aesthetic-contrast",

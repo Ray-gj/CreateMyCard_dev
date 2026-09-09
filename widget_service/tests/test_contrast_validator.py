@@ -273,7 +273,7 @@ def test_gradient_still_reports_when_multiple_samples_have_low_contrast() -> Non
         item for item in reporter.diagnostics if item.code == "VISUAL.CONTRAST"
     ]
     assert len(contrast) == 1
-    assert contrast[0].severity == "warning"
+    assert contrast[0].severity == "error"
     assert contrast[0].actual < 3
 
 

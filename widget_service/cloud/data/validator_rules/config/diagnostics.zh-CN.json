@@ -1,4 +1,20 @@
 {
+  "FUSION.STRUCTURE_INVALID": {
+    "message": "融球背景不符合受控结构。",
+    "fixHint": "按受控融球几何修复背景，百分比必须相对直接父级解析。"
+  },
+  "FUSION.TEXT_CONTRAST": {
+    "message": "融球卡片局部确定背景上的文字对比度不足。",
+    "fixHint": "调整文字或局部底色，至少达到 3:1，建议达到 4.5:1。"
+  },
+  "FUSION.RENDER_REVIEW_REQUIRED": {
+    "message": "融球文字背景无法静态确定，需要端侧渲染复核。",
+    "fixHint": "检查文字所在区域的合成背景；不要把候选球色对比度当作实际渲染结果。"
+  },
+  "LAYOUT.STACK_CONTENT_FLOW": {
+    "message": "Stack 内多个文字前景分支缺少可验证的安全分区，存在内容重叠风险。",
+    "fixHint": "将纵向文字区合并到 Column，横向文字区合并到 Row；保留背景 Stack 和可读字号。"
+  },
   "ASSET.EMOJI_ICON": {
     "message": "不应使用 emoji 作为视觉图标。",
     "fixHint": "将 emoji 替换为已注册的本地图标素材。"

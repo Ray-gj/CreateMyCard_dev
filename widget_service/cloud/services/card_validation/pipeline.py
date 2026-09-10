@@ -7,8 +7,8 @@ Owns the static list of built-in validators and the stage/short-circuit logic.
 subsystem a given validator belongs to.
 
 The online variant keeps the protocol and semantic stages as its core pipeline.
-The quality stage currently hosts deterministic contrast checks; broader design
-contract checks remain the responsibility of the ``generateWidgetCard`` service.
+The quality stage checks foreground layout safety, shape, spacing, and contrast.
+The remaining design-contract validators are not registered here.
 """
 
 from __future__ import annotations
@@ -24,18 +24,11 @@ from .diagnostics import Reporter
 from .display_unit_validator import DisplayUnitValidator
 from .effective_capability_validator import EffectiveCapabilityValidator
 from .expression_validator import ExpressionValidator
+from .fusion_readability_validator import FusionReadabilityValidator
+from .layout_safety_validator import LayoutSafetyValidator
 from .protocol_validator import ProtocolValidator
-from .quality.asset_quality_validator import AssetQualityValidator
-from .quality.color_validator import ColorValidator
-from .quality.copy_validator import CopyValidator
-from .quality.density_validator import DensityValidator
-from .quality.gradient_validator import GradientValidator
-from .quality.icon_validator import IconValidator
-from .quality.layout_2x4_validator import Layout2x4Validator
 from .quality.shape_validator import ShapeValidator
-from .quality.slot_validator import SlotValidator
 from .quality.spacing_validator import SpacingValidator
-from .quality.typography_validator import TypographyValidator
 
 STATIC_VALIDATORS = [
     ProtocolValidator(),
@@ -50,17 +43,10 @@ STATIC_VALIDATORS = [
 ]
 
 QUALITY_VALIDATORS = [
-    # ColorValidator(),
-    # GradientValidator(),
-    # AssetQualityValidator(),
-    # IconValidator(),
+    FusionReadabilityValidator(),
+    LayoutSafetyValidator(),
     ShapeValidator(),
-    # TypographyValidator(),
-    # CopyValidator(),
     SpacingValidator(),
-    # SlotValidator(),
-    # DensityValidator(),
-    # Layout2x4Validator(),
     ContrastValidator(),
 ]
 

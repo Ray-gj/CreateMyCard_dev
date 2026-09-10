@@ -34,6 +34,7 @@ class SpacingValidator(BaseValidator):
             if configured_padding is not None:
                 default_padding = configured_padding
         safe_root_id = self._safe_root_id(context)
+        safe_label = "根容器" if safe_root_id == context.root_id else "内容容器"
         padding_steps = self._field_steps(rules, "allowedPadding", allowed)
         margin_steps = self._field_steps(rules, "allowedMargin", allowed)
         for index, component in iter_components(context):
@@ -44,7 +45,7 @@ class SpacingValidator(BaseValidator):
                         reporter,
                         "SPACING.SAFE_MARGIN",
                         component_pointer(index, "styles/padding"),
-                        f"根容器安全边距应为 {default_padding:g}vp。",
+                        f"{safe_label}安全边距应为 {default_padding:g}vp。",
                         None,
                         default_padding,
                     )
@@ -58,7 +59,7 @@ class SpacingValidator(BaseValidator):
                     reporter,
                     "SPACING.SAFE_MARGIN",
                     component_pointer(index, "styles/padding"),
-                    f"根容器安全边距应为 {default_padding:g}vp。",
+                    f"{safe_label}安全边距应为 {default_padding:g}vp。",
                     padding,
                     default_padding,
                 )
@@ -115,9 +116,27 @@ class SpacingValidator(BaseValidator):
             return safe_root_id
         is_fusion = FUSION_BACKGROUND_ID in children
         is_template = SpacingValidator._is_template_foreground(foreground, context)
-        if is_fusion or is_template:
+        is_layered = SpacingValidator._is_plain_foreground(root, foreground)
+        if is_fusion or is_template or is_layered:
             safe_root_id = foreground_id
         return safe_root_id
+
+    @staticmethod
+    def _is_plain_foreground(root: dict[str, Any], foreground: dict[str, Any]) -> bool:
+        children = root.get("children")
+        if not isinstance(children, list) or len(children) != 1:
+            return False
+        styles = root.get("styles")
+        padding = styles.get("padding") if isinstance(styles, dict) else None
+        if padding is not None and not SpacingValidator._matches_padding(padding, 0):
+            return False
+        foreground_styles = foreground.get("styles")
+        if not isinstance(foreground_styles, dict):
+            return False
+        return (
+            foreground_styles.get("width") == "matchParent"
+            and foreground_styles.get("height") == "matchParent"
+        )
 
     @staticmethod
     def _is_template_foreground(foreground: dict[str, Any], context: Any) -> bool:

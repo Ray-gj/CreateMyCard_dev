@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-from .contrast_validator import RgbaColor, _rgba
+from .color_math import RgbaColor, _rgba
 from .fusion_geometry import FUSION_BALL_GEOMETRIES, FUSION_REFERENCE_SIZE
 
 BACKGROUND_ID = "fusionBallBackground"

@@ -44,6 +44,7 @@ class Layout2x4Validator(BaseValidator):
         parent_width: float,
         parent_height: float,
         visited: set[str],
+        allocated: tuple[str, float] | None = None,
     ) -> None:
         component_id = component.get("id")
         if not isinstance(component_id, str) or component_id in visited:
@@ -55,8 +56,22 @@ class Layout2x4Validator(BaseValidator):
         height = resolve_dimension(styles.get("height"), parent_height)
         resolved_width = width if width is not None else parent_width
         resolved_height = height if height is not None else parent_height
+        if allocated is not None:
+            if allocated[0] == "width":
+                resolved_width = allocated[1]
+            else:
+                resolved_height = allocated[1]
         children = children_of(component, context.components_by_id)
+        padding = spacing_tuple(styles.get("padding"))
+        child_width = max(0.0, resolved_width - padding[1] - padding[3])
+        child_height = max(0.0, resolved_height - padding[0] - padding[2])
+        is_row = component.get("component") == "Row"
+        main_key = "width" if is_row else "height"
+        main_size = child_width if is_row else child_height
+        gap = numeric(component.get("itemMargin")) or 0.0
+        allocations: dict[str, float] = {}
         if component.get("component") in {"Row", "Column"} and children:
+            allocations = self._allocate_weighted(children, main_key, main_size, gap)
             self._check_container(
                 reporter,
                 component,
@@ -65,11 +80,10 @@ class Layout2x4Validator(BaseValidator):
                 equal_split_tokens,
                 resolved_width,
                 resolved_height,
+                allocations,
             )
-        padding = spacing_tuple(styles.get("padding"))
-        child_width = max(0.0, resolved_width - padding[1] - padding[3])
-        child_height = max(0.0, resolved_height - padding[0] - padding[2])
         for child in children:
+            assigned = allocations.get(child.get("id"))
             self._walk(
                 context,
                 reporter,
@@ -79,7 +93,42 @@ class Layout2x4Validator(BaseValidator):
                 child_width,
                 child_height,
                 visited,
+                (main_key, assigned) if assigned is not None else None,
             )
+
+    @staticmethod
+    def _allocate_weighted(
+        children: list[dict[str, Any]], key: str, available: float, gap: float
+    ) -> dict[str, float]:
+        weighted: list[tuple[str, float, float]] = []
+        fixed = gap * (len(children) - 1)
+        for child in children:
+            styles = child.get("styles")
+            styles = styles if isinstance(styles, dict) else {}
+            margins = spacing_tuple(styles.get("margin"))
+            fixed += margins[1] + margins[3] if key == "width" else margins[0] + margins[2]
+            weight = numeric(styles.get("layoutWeight"))
+            child_id = child.get("id")
+            if weight is not None and weight > 0 and isinstance(child_id, str):
+                constraints = styles.get("constraintSize")
+                minimum = None
+                if isinstance(constraints, dict):
+                    minimum = numeric(
+                        constraints.get("minWidth" if key == "width" else "minHeight")
+                    )
+                weighted.append((child_id, weight, minimum if minimum is not None else 0.0))
+                continue
+            value = resolve_dimension(styles.get(key), available)
+            if value is None:
+                return {}
+            fixed += value
+        total_weight = sum(item[1] for item in weighted)
+        result: dict[str, float] = {}
+        if total_weight > 0:
+            remaining = max(0.0, available - fixed)
+            for child_id, weight, minimum in weighted:
+                result[child_id] = max(minimum, remaining * weight / total_weight)
+        return result
 
     def _check_container(
         self,
@@ -90,6 +139,7 @@ class Layout2x4Validator(BaseValidator):
         equal_split_tokens: tuple[str, ...],
         width: float,
         height: float,
+        allocations: dict[str, float],
     ) -> None:
         is_row = component.get("component") == "Row"
         dimension_key = "width" if is_row else "height"
@@ -112,7 +162,11 @@ class Layout2x4Validator(BaseValidator):
         for child in children:
             child_styles = child.get("styles")
             child_styles = child_styles if isinstance(child_styles, dict) else {}
-            value = resolve_dimension(child_styles.get(dimension_key), inner_parent)
+            value = allocations.get(child.get("id"))
+            if value is None:
+                weight = numeric(child_styles.get("layoutWeight"))
+                if weight is None or weight <= 0:
+                    value = resolve_dimension(child_styles.get(dimension_key), inner_parent)
             margins = spacing_tuple(child_styles.get("margin"))
             margin = margins[1] + margins[3] if is_row else margins[0] + margins[2]
             if value is None:
@@ -172,9 +226,11 @@ class Layout2x4Validator(BaseValidator):
         configured = rules.layout.get("equalSplitIdTokens")
         if not isinstance(configured, list):
             return fallback
-        tokens = tuple(
-            token.strip().lower()
-            for token in configured
-            if isinstance(token, str) and token.strip()
-        )
-        return tokens or fallback
+        tokens: list[str] = []
+        for token in configured:
+            if not isinstance(token, str):
+                continue
+            normalized = token.strip().lower()
+            if normalized:
+                tokens.append(normalized)
+        return tuple(tokens) if tokens else fallback

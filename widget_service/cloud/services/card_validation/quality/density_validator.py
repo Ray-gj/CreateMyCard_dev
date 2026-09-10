@@ -18,11 +18,16 @@ class DensityValidator(BaseValidator):
         if suggest_size not in {"2x2", "2x4"}:
             return
         reachable = list(iter_reachable_components(context))
-        actions = [
-            component
-            for component in reachable
-            if isinstance(component.get("onClick"), list) and component.get("onClick")
-        ]
+        actions: list[dict[str, Any]] = []
+        for component in reachable:
+            is_root_entry = component.get("id") == context.root_id and component.get(
+                "component"
+            ) in {"Row", "Column", "Stack", "List"}
+            if is_root_entry:
+                continue
+            handlers = component.get("onClick")
+            if isinstance(handlers, list) and handlers:
+                actions.append(component)
         default_action_limit = 2 if suggest_size == "2x4" else 1
         limit = self._size_limit(
             rules,

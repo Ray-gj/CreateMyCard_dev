@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 
 from .base import BaseValidator
-from .contrast_validator import RgbColor, _composite, _contrast
+from .color_math import _contrast, approved_color_pair
+from .fusion_background import (
+    _Background,
+    _initial_background,
+    _is_text,
+    _uniform_stack_background,
+    _with_background,
+)
 from .fusion_geometry import FUSION_REFERENCE_SIZE
 from .fusion_structure import (
-    FusionStructure,
     child_ids,
     color_of,
     dimension,
@@ -18,81 +23,6 @@ from .fusion_structure import (
     styles_of,
     visible,
 )
-
-
-@dataclass
-class _Background:
-    color: RgbColor | None = None
-    samples: list[RgbColor] = field(default_factory=list)
-    reasons: tuple[str, ...] = ()
-    effects: tuple[str, ...] = ()
-
-
-def _opaque_rgb(color: tuple[float, float, float, float]) -> RgbColor:
-    return color[0], color[1], color[2]
-
-
-def _initial_background(structure: FusionStructure, root: dict[str, Any]) -> _Background:
-    samples: list[RgbColor] = []
-    if structure.glass is not None:
-        for color in structure.colors:
-            samples.append(_composite(_opaque_rgb(color), structure.glass))
-    reasons = ["融球玻璃模糊尚未与端侧校准，球色候选不代表文字位置的实际背景"]
-    root_color = color_of(styles_of(root).get("backgroundColor"))
-    if root_color is None or root_color[3] != 1.0:
-        reasons.append("透明背景覆盖不足时可能依赖未知宿主底色")
-    return _Background(samples=samples, reasons=tuple(reasons))
-
-
-def _is_text(component: dict[str, Any]) -> bool:
-    kind = component.get("component")
-    if kind not in ("Text", "Button"):
-        return False
-    content = component.get("content" if kind == "Text" else "label")
-    if isinstance(content, str):
-        return bool(content.strip())
-    return content is not None
-
-
-def _with_background(component: dict[str, Any], inherited: _Background) -> _Background:
-    styles = styles_of(component)
-    result = _Background(
-        inherited.color, list(inherited.samples), inherited.reasons, inherited.effects
-    )
-    effects = list(result.effects)
-    if styles.get("opacity", 1) != 1:
-        effects.append("祖先或文字含未合成的整体 opacity")
-    if any(key in styles for key in ("transform", "blendMode", "filter", "foregroundBlur")):
-        effects.append("存在未建模的绘制效果")
-    result.effects = tuple(dict.fromkeys(effects))
-    if "backgroundColor" in styles:
-        color = color_of(styles.get("backgroundColor"))
-        if color is None:
-            result.color = None
-            result.samples = []
-            result.reasons = ("局部背景颜色无法静态解析",)
-        elif color[3] == 1.0:
-            contained = styles.get("clip") is True or _is_text(component)
-            result.color = _opaque_rgb(color) if contained else None
-            result.samples = [_opaque_rgb(color)]
-            result.reasons = () if contained else ("不透明底板未裁剪，无法证明文字位于底板覆盖区",)
-        else:
-            if result.color is not None:
-                result.color = _composite(result.color, color)
-            result.samples = [_composite(sample, color) for sample in result.samples]
-            contained = styles.get("clip") is True or _is_text(component)
-            if color[3] > 0.0 and not contained:
-                result.color = None
-                result.reasons += ("半透明局部底板未裁剪，文字可能跨越底板边缘",)
-    uncertain_paint = any(
-        key in styles
-        for key in ("backgroundImage", "linearGradient", "radialGradient", "backdropBlur")
-    )
-    if uncertain_paint:
-        result.color = None
-        result.samples = []
-        result.reasons = ("局部图片、渐变或背景模糊尚未纳入确定性合成",)
-    return result
 
 
 def _report(
@@ -117,7 +47,6 @@ class FusionReadabilityValidator(BaseValidator):
     name = "fusion_readability"
 
     def validate(self, context: Any, rules: Any, reporter: Any) -> None:
-        del rules
         root = context.components_by_id.get(context.root_id)
         if not isinstance(root, dict) or not reachable_fusion(root, context.components_by_id):
             return
@@ -157,10 +86,15 @@ class FusionReadabilityValidator(BaseValidator):
             # 外壳上的整体效果同样作用于前景，不能在局部底板处遗忘。
             root_effects = _with_background(root, _Background()).effects
             initial.effects = root_effects
-            self._walk(context, structure.foreground, initial, reporter)
+            self._walk(context, structure.foreground, initial, reporter, rules)
 
     def _walk(
-        self, context: Any, root: dict[str, Any], initial: _Background, reporter: Any
+        self,
+        context: Any,
+        root: dict[str, Any],
+        initial: _Background,
+        reporter: Any,
+        rules: Any,
     ) -> None:
         pending = [(root, initial)]
         indexes: dict[str, int] = {}
@@ -214,7 +148,9 @@ class FusionReadabilityValidator(BaseValidator):
                     "使用已支持组件，或补充该组件的渲染语义后复核。",
                 )
             if _is_text(component):
-                self._check_text(component, background, pointer, reporter)
+                self._check_foreground(component, background, pointer, reporter, rules)
+            elif component.get("component") == "Image" and "fillColor" in styles_of(component):
+                self._check_foreground(component, background, pointer, reporter, rules)
             children = child_ids(component)
             raw_children = component.get("children")
             if raw_children is not None and not _complete_children(raw_children, children):
@@ -243,21 +179,56 @@ class FusionReadabilityValidator(BaseValidator):
                 elif visible(child):
                     visible_children.append(child)
             if component.get("component") == "Stack" and len(visible_children) > 1:
+                composed = _uniform_stack_background(component, visible_children, background)
+                if composed is not None:
+                    pending.append((visible_children[1], composed))
+                    continue
                 background.effects += ("前景 Stack 存在未解析的兄弟叠层",)
             for child in reversed(visible_children):
                 pending.append((child, background))
 
     @staticmethod
-    def _check_text(
-        component: dict[str, Any], background: _Background, pointer: str, reporter: Any
+    def _check_foreground(
+        component: dict[str, Any],
+        background: _Background,
+        pointer: str,
+        reporter: Any,
+        rules: Any,
     ) -> None:
         styles = styles_of(component)
         key = "fontColor" if "fontColor" in styles else "textColor"
+        icon = component.get("component") == "Image"
+        if icon:
+            key = "fillColor"
+        subject = "图标" if icon else "文字"
         color = styles.get(key)
         parsed = color_of(color)
         location = f"{pointer}/styles/{key}"
         if parsed is not None and background.color is not None and not background.effects:
             ratio = _contrast(color, background.color)
+            palette = getattr(rules, "template_contrast", {})
+            approved = approved_color_pair(
+                color, [background.color], palette.get("approvedPairs", [])
+            )
+            if approved:
+                return
+            if icon:
+                if ratio < 3.0:
+                    _report(
+                        reporter,
+                        "FUSION.RENDER_REVIEW_REQUIRED",
+                        "warning",
+                        location,
+                        "图标填充色与确定背景的对比度低于 3:1，请结合素材形状复核辨识度。",
+                        {
+                            "ratio": round(ratio, 4),
+                            "target": "icon",
+                            "backgroundPath": background.path,
+                            "requiresRenderReview": True,
+                        },
+                        "优先调整图标填充色或局部底板；不根据装饰球色修改正式模板。",
+                    )
+                return
             if ratio < 4.5:
                 severity = "error" if ratio < 3.0 else "warning"
                 _report(
@@ -266,30 +237,40 @@ class FusionReadabilityValidator(BaseValidator):
                     severity,
                     location,
                     f"融球卡片局部确定背景上的文字对比度为 {ratio:.2f}:1。",
-                    {"ratio": round(ratio, 4), "basis": "opaque-local-background"},
+                    {
+                        "ratio": round(ratio, 4),
+                        "basis": "opaque-local-background",
+                        "backgroundPath": background.path,
+                        "target": "text",
+                    },
                     "提高文字与局部底色的对比度，至少达到 3:1，建议达到 4.5:1；"
                     "优先调整文字颜色、透明度或底板，不缩小字号。",
                 )
             return
         reasons = list(dict.fromkeys(background.reasons + background.effects))
-        actual: dict[str, Any] = {"requiresRenderReview": True, "reasons": reasons}
+        actual: dict[str, Any] = {
+            "requiresRenderReview": True,
+            "reasons": reasons,
+            "backgroundPath": background.path,
+            "target": "icon" if icon else "text",
+        }
         if parsed is None:
-            reasons.append("文字颜色缺失或无法静态解析")
+            reasons.append(subject + "颜色缺失或无法静态解析")
         elif background.samples:
             ratios = [_contrast(color, sample) for sample in background.samples]
             actual["candidateContrastRange"] = [round(min(ratios), 4), round(max(ratios), 4)]
-            actual["candidateBasis"] = "球原色叠加玻璃底色与局部底色；非空间、非模糊测量"
+            actual["candidateBasis"] = "球色、玻璃及局部纯色或渐变候选；非空间、非模糊测量"
         if not reasons:
-            reasons.append("无法确定文字位置的实际背景")
+            reasons.append("无法确定" + subject + "位置的实际背景")
         _report(
             reporter,
             "FUSION.RENDER_REVIEW_REQUIRED",
             "warning",
             location,
-            "融球文字可读性需要复核：" + "；".join(reasons) + "。",
+            "融球" + subject + "可读性需要复核：" + "；".join(reasons) + "。",
             actual,
-            "复核文字所在位置的端侧合成结果；可使用可靠的不透明局部底板隔离背景，"
-            "或调整球色及文字透明度。候选范围不能作为实测对比度或通过依据。",
+            "复核目标所在位置的端侧合成结果；优先调整前景颜色、透明度或局部底板。"
+            "候选范围不能作为实测对比度或通过依据，不据此改动正式模板球色。",
         )
 
 

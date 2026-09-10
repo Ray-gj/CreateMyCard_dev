@@ -34,6 +34,8 @@ class SpacingValidator(BaseValidator):
             if configured_padding is not None:
                 default_padding = configured_padding
         safe_root_id = self._safe_root_id(context)
+        padding_steps = self._field_steps(rules, "allowedPadding", allowed)
+        margin_steps = self._field_steps(rules, "allowedMargin", allowed)
         for index, component in iter_components(context):
             styles = component.get("styles")
             if not isinstance(styles, dict):
@@ -64,13 +66,13 @@ class SpacingValidator(BaseValidator):
                 reporter,
                 component_pointer(index, "styles/padding"),
                 padding,
-                allowed,
+                padding_steps,
             )
             self._check_spacing_value(
                 reporter,
                 component_pointer(index, "styles/margin"),
                 styles.get("margin"),
-                allowed,
+                margin_steps,
             )
             gap_field = "space" if component.get("component") == "List" else "itemMargin"
             self._check_spacing_value(
@@ -79,6 +81,17 @@ class SpacingValidator(BaseValidator):
                 component.get(gap_field),
                 allowed,
             )
+
+    @staticmethod
+    def _field_steps(rules: Any, key: str, fallback: frozenset[float]) -> frozenset[float]:
+        configured = rules.layout.get(key) if rules is not None else None
+        values: set[float] = set()
+        if isinstance(configured, list):
+            for item in configured:
+                value = numeric(item)
+                if value is not None:
+                    values.add(value)
+        return frozenset(values) if values else fallback
 
     @staticmethod
     def _safe_root_id(context: Any) -> str | None:

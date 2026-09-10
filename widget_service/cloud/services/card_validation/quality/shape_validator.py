@@ -21,6 +21,13 @@ class ShapeValidator(BaseValidator):
             if configured_button_radius is not None and configured_button_radius >= 0:
                 min_button_radius = configured_button_radius
         radii: set[float] = set()
+        configured_radii = rules.layout.get("allowedButtonRadii") if rules is not None else None
+        allowed_radii: set[float] = set()
+        if isinstance(configured_radii, list):
+            for value in configured_radii:
+                radius = numeric(value)
+                if radius is not None:
+                    allowed_radii.add(radius)
         for index, component in iter_components(context):
             styles = component.get("styles")
             is_root = component.get("id") == context.root_id
@@ -59,14 +66,14 @@ class ShapeValidator(BaseValidator):
                 )
             if component.get("component") == "Button":
                 radii.add(radius)
-        if len(radii) > 1:
+        if len(radii) > 1 and not radii.issubset(allowed_radii):
             add(
                 reporter,
                 "SHAPE.RADIUS_FAMILY",
                 "/updateComponents/components",
-                "可点击控件应使用统一圆角体系。",
+                "可点击控件应使用已登记的模板圆角体系。",
                 sorted(radii),
-                "单一圆角档位",
+                sorted(allowed_radii) if allowed_radii else "单一圆角档位",
             )
 
     def _root_radius_values(self, rules: Any) -> tuple[float, ...]:

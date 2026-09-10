@@ -22,6 +22,7 @@ class RuleRegistry:
         self.protocol = self._load_json(self.config_dir / "protocol.json", {})
         self.layout = self._load_json(self.config_dir / "layout.json", {})
         self.style = self._load_json(self.config_dir / "style.json", {})
+        self.template_contrast = self._load_json(self.config_dir / "template_contrast.json", {})
         self.asset = self._load_json(self.config_dir / "asset.json", {})
         self.expression = self._load_json(self.config_dir / "expression.json", {})
         self.diagnostics = self._load_json(self.config_dir / "diagnostics.zh-CN.json", {})

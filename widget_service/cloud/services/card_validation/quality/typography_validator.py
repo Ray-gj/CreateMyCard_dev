@@ -18,19 +18,19 @@ class TypographyValidator(BaseValidator):
         allowed_sizes = self.allowed
         allowed_weights = self.allowed_weights
         if isinstance(configured_sizes, list):
-            parsed_sizes = {
-                float(size)
-                for size in configured_sizes
-                if isinstance(size, (int, float)) and not isinstance(size, bool)
-            }
+            parsed_sizes: set[float] = set()
+            for size in configured_sizes:
+                if isinstance(size, bool) or not isinstance(size, (int, float)):
+                    continue
+                parsed_sizes.add(float(size))
             if parsed_sizes:
                 allowed_sizes = frozenset(parsed_sizes)
         if isinstance(configured_weights, list):
-            parsed_weights = {
-                float(weight)
-                for weight in configured_weights
-                if isinstance(weight, (int, float)) and not isinstance(weight, bool)
-            }
+            parsed_weights: set[float] = set()
+            for weight in configured_weights:
+                if isinstance(weight, bool) or not isinstance(weight, (int, float)):
+                    continue
+                parsed_weights.add(float(weight))
             if parsed_weights:
                 allowed_weights = frozenset(parsed_weights)
         for index, component in iter_components(context):
@@ -73,17 +73,20 @@ class TypographyValidator(BaseValidator):
         has_max = "maxFontSize" in styles
         min_size = numeric(styles.get("minFontSize"))
         max_size = numeric(styles.get("maxFontSize"))
-        invalid_pair = has_min != has_max
+        if has_min and not has_max:
+            max_size = numeric(styles.get("fontSize"))
+        invalid_pair = has_max and not has_min
+        invalid_minimum = has_min and (min_size is None or max_size is None)
         invalid_order = min_size is not None and max_size is not None and min_size > max_size
-        if invalid_pair or invalid_order:
+        if invalid_pair or invalid_minimum or invalid_order:
             add(
                 reporter,
                 "TYPE.FONT_SIZE_STEP",
                 component_pointer(index, "styles"),
-                "minFontSize 与 maxFontSize 必须成对声明且范围有效。",
+                "自适应字号范围无效；单独 minFontSize 以 fontSize 为上界。",
                 {
                     "minFontSize": styles.get("minFontSize"),
                     "maxFontSize": styles.get("maxFontSize"),
                 },
-                "minFontSize <= maxFontSize，且两者同时存在",
+                "minFontSize <= maxFontSize（未声明时使用 fontSize）",
             )

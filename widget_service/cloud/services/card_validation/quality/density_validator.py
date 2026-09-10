@@ -18,41 +18,6 @@ class DensityValidator(BaseValidator):
         if suggest_size not in {"2x2", "2x4"}:
             return
         reachable = list(iter_reachable_components(context))
-        actions: list[dict[str, Any]] = []
-        for component in reachable:
-            is_root_entry = component.get("id") == context.root_id and component.get(
-                "component"
-            ) in {"Row", "Column", "Stack", "List"}
-            if is_root_entry:
-                continue
-            handlers = component.get("onClick")
-            if isinstance(handlers, list) and handlers:
-                actions.append(component)
-        default_action_limit = 2 if suggest_size == "2x4" else 1
-        limit = self._size_limit(
-            rules,
-            "maxExplicitActions",
-            suggest_size,
-            default_action_limit,
-        )
-        if len(actions) > limit:
-            add(
-                reporter,
-                "DENSITY.EXPLICIT_ACTIONS",
-                "/updateComponents/components",
-                "显式操作数量超过卡片尺寸上限。",
-                len(actions),
-                f"<= {limit}",
-            )
-        if len(actions) > 1:
-            add(
-                reporter,
-                "DENSITY.SINGLE_PRIMARY_ACTION",
-                "/updateComponents/components",
-                "卡片默认只保留一个主要操作。",
-                len(actions),
-                1,
-            )
         numbers = [
             component
             for component in reachable

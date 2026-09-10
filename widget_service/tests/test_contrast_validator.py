@@ -318,9 +318,10 @@ def test_gradient_still_reports_when_multiple_samples_have_low_contrast() -> Non
 
     contrast = [item for item in reporter.diagnostics if item.code == "VISUAL.CONTRAST"]
     assert len(contrast) == 1
-    assert contrast[0].severity == "warning"
+    assert contrast[0].severity == "error"
     assert contrast[0].actual < 3
-    assert "render review" in contrast[0].message
+    assert "render review" not in contrast[0].message
+    assert "only if" not in contrast[0].fix_hint
 
 
 @pytest.mark.parametrize(

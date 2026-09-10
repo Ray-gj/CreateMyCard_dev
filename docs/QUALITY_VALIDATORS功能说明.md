@@ -16,7 +16,7 @@
 
 开启 `stop_on_stage_error` 时，前序错误可以阻止进入质量阶段。具体规则还会根据尺寸、组件类型、场景和字段可解析性跳过。校验器生成诊断，不自动修改卡片，也不直接适用于尚未转换的 Compact DSL。
 
-扩展规则默认报 `error`，只有 `ICON.DUPLICATE_SRC` 和 `DENSITY.SINGLE_PRIMARY_ACTION` 报 `warning`；对比度自行决定级别。前 11 项共使用 23 个独立诊断码，对比度另使用 `VISUAL.CONTRAST`。
+扩展规则默认报 `error`，只有 `ICON.DUPLICATE_SRC` 报 `warning`；对比度自行决定级别。前 11 项共使用 21 个独立诊断码，对比度另使用 `VISUAL.CONTRAST`。
 
 **诊断错误不等于交付失败。** 正式方案规定产物校验默认开启、失败重试默认关闭；开启重试后最多重新生成一次，仍失败时记录日志并保存最后一次输出。当前产物校验失败属于非阻断质量观测，不直接把生成响应改为 `failed`。
 
@@ -323,36 +323,17 @@
 
 源码：`widget_service/cloud/services/card_validation/quality/slot_validator.py`。
 
-### 2.10 DensityValidator：信息密度
+### 2.10 DensityValidator：大字号数字密度
 
-目的：限制操作和突出数字，避免焦点分散。只针对 2×2、2×4，统计从根可达的组件。
+2026-09-10 取消显式操作数量上限和默认只保留一个主要操作的限制，多操作不再触发密度错误或警告。
+不再读取 `maxExplicitActions`。仅统计从根节点可达且去重后的大字号数字文本。
 
-| 检查项 | 2×2 上限 | 2×4 上限 | 诊断码 |
-|---|---:|---:|---|
-| 带非空点击处理列表的组件 | 1 | 2 | `DENSITY.EXPLICIT_ACTIONS` |
-| 大字号数字文本 | 1 | 2 | `DENSITY.NUMBERS` |
+| 检查项 | 2x2 默认上限 | 2x4 默认上限 | 诊断码 |
+|---|---|---|---|
+| 字号至少 24 且文本以数字或正负号加数字开头的 Text | 1 | 2 | `DENSITY.NUMBERS` |
 
-大数字要求：组件为 `Text`、数值 `fontSize ≥ 24`、可解析文本去除首尾空白后以数字或带正负号的数字开头。
-
-操作组件大于 1 时另报 `DENSITY.SINGLE_PRIMARY_ACTION` 警告。因此 2×4 两个操作不超过上限，但仍有突出单一主要操作的建议。
-
-边界：统计点击组件，不对业务动作去重；父子均声明点击时可能分别计数。可达不等于渲染后可见，也不衡量文字面积或真实视觉密度。
-
-#### 字段与代码判定
-
-| 字段路径 | 用途与跳过条件 |
-|---|---|
-| `context.cardspec.suggestSize` | 不为 2x2 或 2x4 时整个校验跳过 |
-| `root_id / components_by_id / children` | iter_reachable_components() 从根遍历并按 ID 去重 |
-| `onClick` | 任意类型组件为非空列表就计一个操作，不统计 handler 个数 |
-| `component / styles.fontSize / content` | Text、可解析字号至少 24、可解析文本符合数字前缀 |
-| `context.data_model` | 提供大数字文本的首帧解析数据 |
-| `rules.layout.maxExplicitActions[suggestSize]` | 非布尔非负整数才采用；默认 2x2 为 1，2x4 为 2 |
-| `rules.layout.maxLargeNumbers[suggestSize]` | 同上，允许配置为 0 |
-
-数字前缀正则为 `^[+\-]?\d`，因此“23℃”“-2”可以计数，“今日23”不计数。只读取 fontSize，不用 maxFontSize 推断大数字。
-
-2x4 两个操作只报单一主操作警告，三个操作同时报数量超限错误与该警告。三项诊断都定位组件集合，actual 为计数。
+上限读取 `rules.layout.maxLargeNumbers[suggestSize]`，仅接受非布尔非负整数。
+通过首帧数据解析绑定文本；未声明有效尺寸时跳过。超限输出 error，actual 为数量。
 
 源码：`widget_service/cloud/services/card_validation/quality/density_validator.py`。
 

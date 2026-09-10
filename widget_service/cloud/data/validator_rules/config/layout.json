@@ -70,10 +70,6 @@
     "2x2": 6,
     "2x4": 8
   },
-  "maxExplicitActions": {
-    "2x2": 2,
-    "2x4": 1
-  },
   "maxLargeNumbers": {
     "2x2": 1,
     "2x4": 2

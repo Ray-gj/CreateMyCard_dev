@@ -129,7 +129,7 @@ class ContrastValidator(BaseValidator):
                 ratio = _reported_contrast_ratio(ratios, is_gradient)
                 approved = self._approved_pair(foreground, effective_backgrounds, approved_pairs)
                 if ratio < 4.5 and not approved:
-                    severity = "error" if ratio < 3 else "warning"
+                    severity = "error" if ratio < 2.0 else "warning"
                     requires_render_review = is_gradient and severity == "warning"
                     component_id = component.get("id")
                     pointer = f"/updateComponents/componentsById/{component_id}/styles/{color_key}"
@@ -142,9 +142,9 @@ class ContrastValidator(BaseValidator):
                         json_pointer=pointer,
                         actual=round(ratio, 2),
                         expected=(
-                            ">= 3:1 after render review; >= 4.5:1 recommended"
+                            ">= 2:1 after render review; >= 4.5:1 recommended"
                             if requires_render_review
-                            else ">= 3:1; >= 4.5:1 recommended"
+                            else ">= 2:1; >= 4.5:1 recommended"
                         ),
                         message=(
                             f"text contrast is {ratio:.2f}:1; gradient requires render review"

@@ -230,7 +230,7 @@ class FusionReadabilityValidator(BaseValidator):
                     )
                 return
             if ratio < 4.5:
-                severity = "error" if ratio < 3.0 else "warning"
+                severity = "error" if ratio < 2.0 else "warning"
                 _report(
                     reporter,
                     "FUSION.TEXT_CONTRAST",
@@ -243,7 +243,7 @@ class FusionReadabilityValidator(BaseValidator):
                         "backgroundPath": background.path,
                         "target": "text",
                     },
-                    "提高文字与局部底色的对比度，至少达到 3:1，建议达到 4.5:1；"
+                    "提高文字与局部底色的对比度，至少达到 2:1，建议达到 4.5:1；"
                     "优先调整文字颜色、透明度或底板，不缩小字号。",
                 )
             return

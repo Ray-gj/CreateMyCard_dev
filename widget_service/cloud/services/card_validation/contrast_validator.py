@@ -3,13 +3,14 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 
 from .base import BaseValidator
 
+_LOGGER = logging.getLogger(__name__)
 _HEX_COLOR = re.compile(r"^#(?P<hex>[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
-_TEMPLATE_ROOT_ID = "template_root"
 _NORMAL_ROOT_ID = "root_0"
 _FUSION_BACKGROUND_ID = "fusionBallBackground"
 _OPAQUE_ALPHA = 1.0
@@ -125,6 +126,11 @@ class ContrastValidator(BaseValidator):
 
     def validate(self, context, rules, reporter) -> None:
         del rules
+        if context.has_fusion_template_root():
+            _LOGGER.info(
+                "quality_validation_skipped reason=fusion_template_root validator=contrast"
+            )
+            return
         if not context.components or not context.root_id:
             return
         by_id = context.components_by_id
@@ -154,9 +160,6 @@ class ContrastValidator(BaseValidator):
         is_gradient: bool,
         is_fusion_scene: bool,
     ) -> None:
-        # 模板内容沿用模板配色，不追加对比度诊断；其它校验仍由各自的 validator 执行。
-        if component.get("id") == _TEMPLATE_ROOT_ID:
-            return
         styles = component.get("styles")
         styles = styles if isinstance(styles, dict) else {}
         effective_backgrounds = list(backgrounds)
@@ -210,8 +213,9 @@ class ContrastValidator(BaseValidator):
             if ratios:
                 ratio = _reported_contrast_ratio(ratios, is_gradient)
                 if ratio < 4.5:
-                    severity = "error" if ratio < 3 else "warning"
-                    requires_render_review = is_gradient and severity == "warning"
+                    # 渐变 stop 只代表背景采样点，无法证明文本矩形整体不可读。
+                    # 渐变场景统一进入渲染复核；纯色背景继续按最低阈值阻塞。
+                    severity = "warning" if is_gradient else ("error" if ratio < 3 else "warning")
                     component_id = component.get("id")
                     pointer = (
                         f"/updateComponents/componentsById/{component_id}/styles/{color_key}"
@@ -226,18 +230,18 @@ class ContrastValidator(BaseValidator):
                         actual=round(ratio, 2),
                         expected=(
                             ">= 3:1 after render review; >= 4.5:1 recommended"
-                            if requires_render_review
+                            if is_gradient
                             else ">= 3:1; >= 4.5:1 recommended"
                         ),
                         message=(
                             f"text contrast is {ratio:.2f}:1; gradient requires render review"
-                            if requires_render_review
+                            if is_gradient
                             else f"text contrast is {ratio:.2f}:1"
                         ),
                         fix_hint=(
                             "Confirm readability on the rendered gradient; adjust contrast "
                             "only if the text area is unclear."
-                            if requires_render_review
+                            if is_gradient
                             else "Use a stronger foreground color or adjust the background."
                         ),
                         source="aesthetic-contrast",

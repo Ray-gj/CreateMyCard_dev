@@ -7,17 +7,20 @@ Owns the static list of built-in validators and the stage/short-circuit logic.
 subsystem a given validator belongs to.
 
 The online variant keeps the protocol and semantic stages as its core pipeline.
-The quality stage checks foreground layout safety, shape, spacing, and contrast.
-The remaining design-contract validators are not registered here.
+The quality stage currently hosts deterministic contrast checks; broader design
+contract checks remain the responsibility of the ``generateWidgetCard`` service.
 """
 
 from __future__ import annotations
+
+import logging
 
 from .aesthetic_baseline_validator import AestheticBaselineValidator
 from .asset_validator import AssetValidator
 from .binding_validator import BindingValidator
 from .cardspec_validator import CardSpecValidator
 from .component_validator import ComponentValidator
+from .context import ValidationContext
 from .contrast_validator import ContrastValidator
 from .cross_validator import CrossValidator
 from .diagnostics import Reporter
@@ -29,6 +32,8 @@ from .layout_safety_validator import LayoutSafetyValidator
 from .protocol_validator import ProtocolValidator
 from .quality.shape_validator import ShapeValidator
 from .quality.spacing_validator import SpacingValidator
+
+_LOGGER = logging.getLogger(__name__)
 
 STATIC_VALIDATORS = [
     ProtocolValidator(),
@@ -71,7 +76,7 @@ def selected_stages(stage: str) -> list[str]:
 
 
 def run_pipeline(
-    context,
+    context: ValidationContext,
     rules,
     reporter: Reporter,
     stage: str,
@@ -84,6 +89,9 @@ def run_pipeline(
             return
         if stop_on_stage_error and current_stage == "quality" and reporter.error_count:
             return
+        if current_stage == "quality" and context.has_fusion_template_root():
+            _LOGGER.info("quality_validation_skipped reason=fusion_template_root")
+            continue
         for validator in validators:
             if validator.stage == current_stage:
                 validator.validate(context, rules, reporter)

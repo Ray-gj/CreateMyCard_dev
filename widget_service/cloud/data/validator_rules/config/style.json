@@ -1,6 +1,7 @@
 {
   "createSurfaceAllowedStyles": ["borderRadius", "clip"],
   "rootBackgroundStyles": ["backgroundColor", "linearGradient", "backgroundImage"],
+  "allowedAlphaSteps": [0, 12, 13, 25, 26, 38, 39, 51, 77, 102, 127, 128, 153, 178, 179, 204, 229, 230, 255],
   "commonStyleFields": [
     "width", "height", "aspectRatio", "constraintSize", "margin", "padding", "borderRadius",
     "borderWidth", "borderColor", "backgroundColor", "backgroundImage",

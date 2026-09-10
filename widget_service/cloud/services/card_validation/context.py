@@ -33,19 +33,23 @@ class ValidationContext:
 
     def has_fusion_template_root(self) -> bool:
         """判断是否满足模板融球整卡质量豁免的结构条件。"""
+        return self.has_fusion_background_root() and self._root_references("template_root")
+
+    def has_fusion_background_root(self) -> bool:
+        """仅依据公共根的有效直接引用识别融球质量分流。"""
         if self.root_id != "root" or self.duplicate_component_ids:
             return False
+        return self._root_references("fusionBallBackground")
+
+    def _root_references(self, component_id: str) -> bool:
         root = self.root_component
-        template = self.components_by_id.get("template_root")
-        if root is None or template is None:
+        referenced = self.components_by_id.get(component_id)
+        if root is None or referenced is None:
             return False
         children = root.get("children")
         if not isinstance(children, list):
             return False
-        background = self.components_by_id.get("fusionBallBackground")
-        if background is None:
-            return False
-        return "template_root" in children and "fusionBallBackground" in children
+        return component_id in children
 
     def line_for_genui_pointer(self, pointer: str) -> int | None:
         if pointer.startswith("/createSurface"):

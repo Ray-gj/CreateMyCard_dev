@@ -1,8 +1,129 @@
 {
   "defaultPadding": 12,
-  "allowedFontSizes": [10, 12, 14, 16, 18, 20, 32, 40],
-  "allowedSpacing": [0, 2, 4, 6, 8, 10, 12, 14, 16],
+  "rootBorderRadius": [
+    18,
+    20
+  ],
+  "minButtonRadius": 14,
+  "allowedFontSizes": [
+    8,
+    9.14,
+    10,
+    11,
+    12,
+    13.71,
+    14,
+    16,
+    18,
+    20,
+    24,
+    28,
+    30,
+    32,
+    34,
+    38,
+    40,
+    56
+  ],
+  "allowedFontWeights": [
+    100,
+    200,
+    300,
+    400,
+    500,
+    600,
+    700,
+    800,
+    900
+  ],
+  "allowedSpacing": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6,
+    8,
+    10,
+    12,
+    14,
+    16
+  ],
+  "titleFontSizes": {
+    "2x2": [
+      12,
+      14,
+      16,
+      18,
+      20
+    ],
+    "2x4": [
+      12,
+      14,
+      16,
+      18,
+      20
+    ]
+  },
+  "titleMaxChars": 8,
+  "maxActionLabelChars": {
+    "2x2": 6,
+    "2x4": 8
+  },
+  "maxExplicitActions": {
+    "2x2": 2,
+    "2x4": 1
+  },
+  "maxLargeNumbers": {
+    "2x2": 1,
+    "2x4": 2
+  },
+  "equalSplitIdTokens": [
+    "equal",
+    "grid",
+    "metrics",
+    "cells"
+  ],
   "minClickableSize": 24,
   "maxMeaninglessWhitespace": 18,
-  "protectedTextOverflow": ["ellipsis", "clip"]
+  "protectedTextOverflow": [
+    "ellipsis",
+    "clip"
+  ],
+  "allowedButtonRadii": [
+    14,
+    15,
+    16,
+    18,
+    20
+  ],
+  "allowedPadding": [
+    0,
+    2,
+    4,
+    6,
+    7,
+    8,
+    10,
+    11,
+    12,
+    14,
+    16,
+    34
+  ],
+  "allowedMargin": [
+    -2,
+    0,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8,
+    10,
+    12,
+    13,
+    14,
+    16
+  ]
 }

@@ -4,118 +4,29 @@
 from __future__ import annotations
 
 import logging
-import re
 from typing import Any
 
 from .base import BaseValidator
+from .color_math import (
+    RgbaColor as RgbaColor,
+)
+from .color_math import (
+    RgbColor,
+    _composite_candidates,
+    _contrast,
+    _gradient_color_samples,
+    _reported_contrast_ratio,
+    _rgba,
+    approved_color_pair,
+)
+from .color_math import (
+    _composite as _composite,
+)
 
 _LOGGER = logging.getLogger(__name__)
-_HEX_COLOR = re.compile(r"^#(?P<hex>[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 _NORMAL_ROOT_ID = "root_0"
 _FUSION_BACKGROUND_ID = "fusionBallBackground"
 _OPAQUE_ALPHA = 1.0
-
-RgbColor = tuple[float, float, float]
-RgbaColor = tuple[float, float, float, float]
-
-
-def _rgba(value: Any) -> RgbaColor:
-    if not isinstance(value, str):
-        raise ValueError("color value must be a hex string")
-    match = _HEX_COLOR.fullmatch(value.strip())
-    if match is None:
-        raise ValueError(f"invalid hex color: {value!r}")
-    raw = match.group("hex")
-    if len(raw) == 6:
-        alpha = 1.0
-        red, green, blue = (int(raw[index:index + 2], 16) / 255 for index in (0, 2, 4))
-        return (red, green, blue, alpha)
-    # DSL uses ARGB for eight-digit colors.
-    alpha = int(raw[:2], 16) / 255
-    red, green, blue = (int(raw[index:index + 2], 16) / 255 for index in (2, 4, 6))
-    return (red, green, blue, alpha)
-
-
-def _composite(
-    background: RgbColor,
-    foreground: RgbaColor,
-) -> RgbColor:
-    red, green, blue = background
-    top_red, top_green, top_blue, alpha = foreground
-    return (
-        top_red * alpha + red * (1 - alpha),
-        top_green * alpha + green * (1 - alpha),
-        top_blue * alpha + blue * (1 - alpha),
-    )
-
-
-def _luminance(rgb: RgbColor) -> float:
-    def linear(value: float) -> float:
-        return value / 12.92 if value <= 0.03928 else ((value + 0.055) / 1.055) ** 2.4
-
-    red, green, blue = (linear(value) for value in rgb)
-    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
-
-
-def _contrast(foreground: Any, background: RgbColor) -> float:
-    parsed = _rgba(foreground)
-    foreground_rgb = _composite(background, parsed)
-    first = _luminance(foreground_rgb)
-    second = _luminance(background)
-    return (max(first, second) + 0.05) / (min(first, second) + 0.05)
-
-
-def _interpolate_color(left: RgbaColor, right: RgbaColor) -> RgbaColor:
-    return (
-        (left[0] + right[0]) / 2,
-        (left[1] + right[1]) / 2,
-        (left[2] + right[2]) / 2,
-        (left[3] + right[3]) / 2,
-    )
-
-
-def _gradient_color_samples(gradient: Any) -> list[RgbaColor]:
-    if not isinstance(gradient, dict):
-        return []
-    stops = gradient.get("colors")
-    if not isinstance(stops, list):
-        return []
-
-    colors: list[RgbaColor] = []
-    for stop in stops:
-        raw = stop[0] if isinstance(stop, (list, tuple)) and stop else stop
-        try:
-            colors.append(_rgba(raw))
-        except ValueError:
-            continue
-
-    samples: list[RgbaColor] = []
-    for index, color in enumerate(colors):
-        samples.append(color)
-        if index + 1 < len(colors):
-            samples.append(_interpolate_color(color, colors[index + 1]))
-    return samples
-
-
-def _composite_candidates(
-    backgrounds: list[RgbColor],
-    foregrounds: list[RgbaColor],
-) -> list[RgbColor]:
-    candidates: list[RgbColor] = []
-    for background in backgrounds:
-        for foreground in foregrounds:
-            candidate = _composite(background, foreground)
-            if candidate not in candidates:
-                candidates.append(candidate)
-    return candidates
-
-
-def _reported_contrast_ratio(ratios: list[float], is_gradient: bool) -> float:
-    ordered = sorted(ratios)
-    if is_gradient and len(ordered) >= 3:
-        # 容忍渐变边缘的一个孤立最差样本；多个低对比样本仍会触发诊断。
-        return ordered[1]
-    return ordered[0]
 
 
 class ContrastValidator(BaseValidator):
@@ -125,7 +36,8 @@ class ContrastValidator(BaseValidator):
     name = "contrast"
 
     def validate(self, context, rules, reporter) -> None:
-        del rules
+        palette = getattr(rules, "template_contrast", {})
+        approved_pairs = palette.get("approvedPairs", [])
         if context.has_fusion_template_root():
             _LOGGER.info(
                 "quality_validation_skipped reason=fusion_template_root validator=contrast"
@@ -148,6 +60,7 @@ class ContrastValidator(BaseValidator):
             [(1.0, 1.0, 1.0)],
             is_gradient=False,
             is_fusion_scene=is_fusion_scene and not is_normal_scene,
+            approved_pairs=approved_pairs,
         )
 
     def _walk(
@@ -159,6 +72,7 @@ class ContrastValidator(BaseValidator):
         *,
         is_gradient: bool,
         is_fusion_scene: bool,
+        approved_pairs: list[dict[str, Any]],
     ) -> None:
         styles = component.get("styles")
         styles = styles if isinstance(styles, dict) else {}
@@ -171,8 +85,11 @@ class ContrastValidator(BaseValidator):
             )
             if background[3] >= _OPAQUE_ALPHA:
                 is_gradient = False
-        except ValueError:
-            pass
+        except ValueError as exc:
+            if styles.get("backgroundColor") is not None:
+                _LOGGER.debug(
+                    "background_color_unresolved type=%s reason=%s", type(exc).__name__, exc
+                )
         gradient = styles.get("linearGradient") or styles.get("radialGradient")
         gradient_samples = _gradient_color_samples(gradient)
         if gradient_samples:
@@ -187,9 +104,7 @@ class ContrastValidator(BaseValidator):
             foreground = styles.get(color_key)
             if is_fusion_scene:
                 component_id = component.get("id")
-                pointer = (
-                    f"/updateComponents/componentsById/{component_id}/styles/{color_key}"
-                )
+                pointer = f"/updateComponents/componentsById/{component_id}/styles/{color_key}"
                 reporter.add(
                     "warning",
                     "VISUAL.CONTRAST",
@@ -212,14 +127,12 @@ class ContrastValidator(BaseValidator):
                     continue
             if ratios:
                 ratio = _reported_contrast_ratio(ratios, is_gradient)
-                if ratio < 4.5:
-                    # 渐变 stop 只代表背景采样点，无法证明文本矩形整体不可读。
-                    # 渐变场景统一进入渲染复核；纯色背景继续按最低阈值阻塞。
-                    severity = "warning" if is_gradient else ("error" if ratio < 3 else "warning")
+                approved = self._approved_pair(foreground, effective_backgrounds, approved_pairs)
+                if ratio < 4.5 and not approved:
+                    severity = "error" if ratio < 3 else "warning"
+                    requires_render_review = is_gradient and severity == "warning"
                     component_id = component.get("id")
-                    pointer = (
-                        f"/updateComponents/componentsById/{component_id}/styles/{color_key}"
-                    )
+                    pointer = f"/updateComponents/componentsById/{component_id}/styles/{color_key}"
                     reporter.add(
                         severity,
                         "VISUAL.CONTRAST",
@@ -230,18 +143,18 @@ class ContrastValidator(BaseValidator):
                         actual=round(ratio, 2),
                         expected=(
                             ">= 3:1 after render review; >= 4.5:1 recommended"
-                            if is_gradient
+                            if requires_render_review
                             else ">= 3:1; >= 4.5:1 recommended"
                         ),
                         message=(
                             f"text contrast is {ratio:.2f}:1; gradient requires render review"
-                            if is_gradient
+                            if requires_render_review
                             else f"text contrast is {ratio:.2f}:1"
                         ),
                         fix_hint=(
                             "Confirm readability on the rendered gradient; adjust contrast "
                             "only if the text area is unclear."
-                            if is_gradient
+                            if requires_render_review
                             else "Use a stronger foreground color or adjust the background."
                         ),
                         source="aesthetic-contrast",
@@ -259,7 +172,14 @@ class ContrastValidator(BaseValidator):
                     effective_backgrounds,
                     is_gradient=is_gradient,
                     is_fusion_scene=is_fusion_scene,
+                    approved_pairs=approved_pairs,
                 )
+
+    @staticmethod
+    def _approved_pair(
+        foreground: Any, backgrounds: list[RgbColor], approved_pairs: list[dict[str, Any]]
+    ) -> bool:
+        return approved_color_pair(foreground, backgrounds, approved_pairs)
 
     @staticmethod
     def _has_text(value: Any) -> bool:

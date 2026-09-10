@@ -1,0 +1,1097 @@
+{
+  "source": "template_generation",
+  "templateCount": 107,
+  "themeCount": 14,
+  "approvedPairs": [
+    {
+      "foreground": "#99CCDDFF",
+      "backgrounds": [
+        [
+          0.070588235,
+          0.070588235,
+          0.349019608
+        ],
+        [
+          0.119607843,
+          0.233333333,
+          0.6
+        ],
+        [
+          0.168627451,
+          0.396078431,
+          0.850980392
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-weather-blue/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FFCCDDFF",
+      "backgrounds": [
+        [
+          0.070588235,
+          0.070588235,
+          0.349019608
+        ],
+        [
+          0.119607843,
+          0.233333333,
+          0.6
+        ],
+        [
+          0.168627451,
+          0.396078431,
+          0.850980392
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-weather-blue/theme.json"
+      ]
+    },
+    {
+      "foreground": "#B3CCEEFF",
+      "backgrounds": [
+        [
+          0.070588235,
+          0.117647059,
+          0.349019608
+        ],
+        [
+          0.119607843,
+          0.376470588,
+          0.6
+        ],
+        [
+          0.168627451,
+          0.635294118,
+          0.850980392
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-schedule-cool/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FFCCEEFF",
+      "backgrounds": [
+        [
+          0.070588235,
+          0.117647059,
+          0.349019608
+        ],
+        [
+          0.119607843,
+          0.376470588,
+          0.6
+        ],
+        [
+          0.168627451,
+          0.635294118,
+          0.850980392
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-schedule-cool/theme.json"
+      ]
+    },
+    {
+      "foreground": "#99CCFFF6",
+      "backgrounds": [
+        [
+          0.090196078,
+          0.450980392,
+          0.298039216
+        ],
+        [
+          0.119607843,
+          0.6,
+          0.474509804
+        ],
+        [
+          0.149019608,
+          0.749019608,
+          0.650980392
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-battery-teal/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FFCCFFF6",
+      "backgrounds": [
+        [
+          0.090196078,
+          0.450980392,
+          0.298039216
+        ],
+        [
+          0.119607843,
+          0.6,
+          0.474509804
+        ],
+        [
+          0.149019608,
+          0.749019608,
+          0.650980392
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-battery-teal/theme.json"
+      ]
+    },
+    {
+      "foreground": "#99CCDDFF",
+      "backgrounds": [
+        [
+          0.144959631,
+          0.158554402,
+          0.415394079
+        ],
+        [
+          0.188981161,
+          0.304705882,
+          0.640784314
+        ],
+        [
+          0.233002691,
+          0.450857363,
+          0.866174548
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-weather-blue/theme.json"
+      ]
+    },
+    {
+      "foreground": "#99D9CCFF",
+      "backgrounds": [
+        [
+          0.168627451,
+          0.141176471,
+          0.349019608
+        ],
+        [
+          0.254901961,
+          0.154901961,
+          0.6
+        ],
+        [
+          0.341176471,
+          0.168627451,
+          0.850980392
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-sleep-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#E6FFFFFF",
+      "backgrounds": [
+        [
+          0.168627451,
+          0.141176471,
+          0.349019608
+        ],
+        [
+          0.254901961,
+          0.154901961,
+          0.6
+        ],
+        [
+          0.341176471,
+          0.168627451,
+          0.850980392
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-sleep-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FFCCEEFF",
+      "backgrounds": [
+        [
+          0.216470588,
+          0.280784314,
+          0.479215686
+        ],
+        [
+          0.255686275,
+          0.487843137,
+          0.68
+        ],
+        [
+          0.294901961,
+          0.694901961,
+          0.880784314
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-schedule-cool/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FFCCDDFF",
+      "backgrounds": [
+        [
+          0.256470588,
+          0.256470588,
+          0.479215686
+        ],
+        [
+          0.295686275,
+          0.386666667,
+          0.68
+        ],
+        [
+          0.334901961,
+          0.516862745,
+          0.880784314
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-weather-blue/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FFCCFFF6",
+      "backgrounds": [
+        [
+          0.272156863,
+          0.560784314,
+          0.438431373
+        ],
+        [
+          0.295686275,
+          0.68,
+          0.579607843
+        ],
+        [
+          0.319215686,
+          0.799215686,
+          0.720784314
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-battery-teal/theme.json"
+      ]
+    },
+    {
+      "foreground": "#E6FFFFFF",
+      "backgrounds": [
+        [
+          0.334901961,
+          0.312941176,
+          0.479215686
+        ],
+        [
+          0.403921569,
+          0.323921569,
+          0.68
+        ],
+        [
+          0.472941176,
+          0.334901961,
+          0.880784314
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-sleep-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#99FFFFFF",
+      "backgrounds": [
+        [
+          0.701960784,
+          0.235294118,
+          0.141176471
+        ],
+        [
+          0.850980392,
+          0.384313725,
+          0.170588235
+        ],
+        [
+          1.0,
+          0.533333333,
+          0.2
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-sport-orange/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FFFFFFFF",
+      "backgrounds": [
+        [
+          0.701960784,
+          0.235294118,
+          0.141176471
+        ],
+        [
+          0.850980392,
+          0.384313725,
+          0.170588235
+        ],
+        [
+          1.0,
+          0.533333333,
+          0.2
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-sport-orange/theme.json"
+      ]
+    },
+    {
+      "foreground": "#E61F4799",
+      "backgrounds": [
+        [
+          0.72947328,
+          0.816704344,
+          0.991166474
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/2x2-two-support/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF1F4799",
+      "backgrounds": [
+        [
+          0.742745098,
+          0.799215686,
+          0.916862745
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/meeting-paper-neutral/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF1F4799",
+      "backgrounds": [
+        [
+          0.754509804,
+          0.807843137,
+          0.920784314
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/family-weather-care-blue/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FFFFFFFF",
+      "backgrounds": [
+        [
+          0.761568627,
+          0.388235294,
+          0.312941176
+        ],
+        [
+          0.880784314,
+          0.50745098,
+          0.336470588
+        ],
+        [
+          1.0,
+          0.626666667,
+          0.36
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/fusion-sport-orange/theme.json"
+      ]
+    },
+    {
+      "foreground": "#991F4595",
+      "backgrounds": [
+        [
+          0.807843137,
+          0.869803922,
+          0.99372549
+        ]
+      ],
+      "sources": [
+        "BatteryOverviewChargingDiagnosticsHero@1"
+      ]
+    },
+    {
+      "foreground": "#E61F4595",
+      "backgrounds": [
+        [
+          0.807843137,
+          0.869803922,
+          0.99372549
+        ]
+      ],
+      "sources": [
+        "BatteryOverviewChargingDiagnosticsHero@1"
+      ]
+    },
+    {
+      "foreground": "#FF0A59F7",
+      "backgrounds": [
+        [
+          0.810472895,
+          0.842060746,
+          0.905236448
+        ],
+        [
+          0.879146482,
+          0.910734333,
+          0.973910035
+        ],
+        [
+          0.902037678,
+          0.933625529,
+          0.99680123
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/digital-wellbeing-neutral-dark/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF401F99",
+      "backgrounds": [
+        [
+          0.810980392,
+          0.779607843,
+          0.99372549
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/sleep-night-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#991F4799",
+      "backgrounds": [
+        [
+          0.824867359,
+          0.867435602,
+          0.957693195
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/family-weather-care-blue/theme.json"
+      ]
+    },
+    {
+      "foreground": "#991F4595",
+      "backgrounds": [
+        [
+          0.828458135,
+          0.871219727,
+          0.958342297
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/2x2-two-support/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF52991F",
+      "backgrounds": [
+        [
+          0.831372549,
+          0.946666667,
+          0.79372549
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/audio-product-neutral-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#99000000",
+      "backgrounds": [
+        [
+          0.898039216,
+          0.898039216,
+          0.898039216
+        ],
+        [
+          0.974509804,
+          0.974509804,
+          0.974509804
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/digital-wellbeing-neutral-dark/theme.json"
+      ]
+    },
+    {
+      "foreground": "#E6000000",
+      "backgrounds": [
+        [
+          0.898039216,
+          0.898039216,
+          0.898039216
+        ],
+        [
+          0.974509804,
+          0.974509804,
+          0.974509804
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/digital-wellbeing-neutral-dark/theme.json"
+      ]
+    },
+    {
+      "foreground": "#991F4799",
+      "backgrounds": [
+        [
+          0.898039216,
+          0.929411765,
+          0.996078431
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/family-weather-care-blue/theme.json",
+        "cloud/services/template_generation/resources/source/themes/meeting-paper-neutral/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF1F4799",
+      "backgrounds": [
+        [
+          0.898039216,
+          0.929411765,
+          0.996078431
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/family-weather-care-blue/theme.json",
+        "cloud/services/template_generation/resources/source/themes/meeting-paper-neutral/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF0A59F7",
+      "backgrounds": [
+        [
+          0.899883212,
+          0.899513159,
+          0.916008775
+        ],
+        [
+          0.901499061,
+          0.925097436,
+          0.976603116
+        ],
+        [
+          0.902037678,
+          0.933625529,
+          0.99680123
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/device-clean-blue-teal/theme.json"
+      ]
+    },
+    {
+      "foreground": "#991F4595",
+      "backgrounds": [
+        [
+          0.902037678,
+          0.933625529,
+          0.99680123
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/2x2-two-support/theme.json"
+      ]
+    },
+    {
+      "foreground": "#E61F4595",
+      "backgrounds": [
+        [
+          0.902037678,
+          0.933625529,
+          0.99680123
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/2x2-two-support/theme.json"
+      ]
+    },
+    {
+      "foreground": "#991F4595",
+      "backgrounds": [
+        [
+          0.916432141,
+          0.930826605,
+          0.961214917
+        ]
+      ],
+      "sources": [
+        "ScheduleOverviewTwoEventsFull@1",
+        "WeatherOverviewDailyCompareFull@1",
+        "WeatherOverviewDualCityFull@1"
+      ]
+    },
+    {
+      "foreground": "#E61F4595",
+      "backgrounds": [
+        [
+          0.916432141,
+          0.930826605,
+          0.961214917
+        ]
+      ],
+      "sources": [
+        "ScheduleOverviewTwoEventsFull@1",
+        "WeatherOverviewDailyCompareFull@1",
+        "WeatherOverviewDualCityFull@1"
+      ]
+    },
+    {
+      "foreground": "#FF99521F",
+      "backgrounds": [
+        [
+          0.92,
+          0.817254902,
+          0.745882353
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/race-night-violet/theme.json",
+        "cloud/services/template_generation/resources/source/themes/race-sunrise-action/theme.json"
+      ]
+    },
+    {
+      "foreground": "#991F4799",
+      "backgrounds": [
+        [
+          0.929411765,
+          0.901960784,
+          1.0
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/sleep-night-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF401F99",
+      "backgrounds": [
+        [
+          0.929411765,
+          0.901960784,
+          1.0
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/sleep-night-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#991F4595",
+      "backgrounds": [
+        [
+          0.938023837,
+          0.972810458,
+          0.934825067
+        ]
+      ],
+      "sources": [
+        "BluetoothDeviceOverviewCompletePhoneWideFull@1",
+        "BluetoothDeviceOverviewEarbudsPhoneWideFull@1"
+      ]
+    },
+    {
+      "foreground": "#E61F4595",
+      "backgrounds": [
+        [
+          0.938023837,
+          0.972810458,
+          0.934825067
+        ]
+      ],
+      "sources": [
+        "BluetoothDeviceOverviewCompletePhoneWideFull@1",
+        "BluetoothDeviceOverviewEarbudsPhoneWideFull@1"
+      ]
+    },
+    {
+      "foreground": "#9952991F",
+      "backgrounds": [
+        [
+          0.941176471,
+          1.0,
+          0.901960784
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/audio-product-neutral-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF52991F",
+      "backgrounds": [
+        [
+          0.941176471,
+          1.0,
+          0.901960784
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/audio-product-neutral-violet/theme.json"
+      ]
+    },
+    {
+      "foreground": "#99000000",
+      "backgrounds": [
+        [
+          0.997600923,
+          0.96201461,
+          0.910034602
+        ],
+        [
+          0.999400231,
+          0.990503652,
+          0.977508651
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/device-clean-blue-teal/theme.json"
+      ]
+    },
+    {
+      "foreground": "#E6000000",
+      "backgrounds": [
+        [
+          0.997600923,
+          0.96201461,
+          0.910034602
+        ],
+        [
+          0.999400231,
+          0.990503652,
+          0.977508651
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/device-clean-blue-teal/theme.json"
+      ]
+    },
+    {
+      "foreground": "#9999521F",
+      "backgrounds": [
+        [
+          1.0,
+          0.941176471,
+          0.901960784
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/race-night-violet/theme.json",
+        "cloud/services/template_generation/resources/source/themes/race-sunrise-action/theme.json"
+      ]
+    },
+    {
+      "foreground": "#FF99521F",
+      "backgrounds": [
+        [
+          1.0,
+          0.941176471,
+          0.901960784
+        ]
+      ],
+      "sources": [
+        "cloud/services/template_generation/resources/source/themes/race-night-violet/theme.json",
+        "cloud/services/template_generation/resources/source/themes/race-sunrise-action/theme.json"
+      ]
+    },
+    {
+      "foreground": "#00000000",
+      "backgrounds": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "CountdownOverviewFull@1"
+      ]
+    },
+    {
+      "foreground": "#661F4799",
+      "backgrounds": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "ScheduleOverviewMeetingSourceWideFull@1",
+        "ScheduleOverviewMeetingWideFull@1"
+      ]
+    },
+    {
+      "foreground": "#991F4595",
+      "backgrounds": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "ActivityOverviewCompact@1",
+        "ActivityOverviewFull@1",
+        "ActivityOverviewHero@1",
+        "ActivityOverviewSupport@1",
+        "ActivityOverviewWideFull@1",
+        "ActivityOverviewWideHero@1",
+        "AppUsageOverviewCompact@1",
+        "AppUsageOverviewFull@1",
+        "AppUsageOverviewHero@1",
+        "AppUsageOverviewSupport@1",
+        "AppUsageOverviewWideFull@1",
+        "AppUsageOverviewWideHero@1",
+        "BatteryOverviewChargingProgressFull@1",
+        "BatteryOverviewChargingProgressHero@1",
+        "BatteryOverviewChargingRingHero@1",
+        "BatteryOverviewCompact@1",
+        "BatteryOverviewFull@1",
+        "BatteryOverviewHealthLevelHero@1",
+        "BatteryOverviewStatusSupport@1",
+        "BatteryOverviewSupport@1",
+        "BatteryOverviewTemperatureFull@1",
+        "BatteryOverviewWideFull@1",
+        "BluetoothDeviceOverviewChargeSupport@1",
+        "BluetoothDeviceOverviewCompleteWideFull@1",
+        "BluetoothDeviceOverviewConnectionSupport@1",
+        "BluetoothDeviceOverviewEarbudPairCompact@1",
+        "BluetoothDeviceOverviewEarbudPairFull@1",
+        "BluetoothDeviceOverviewEarbudsDynamicWideFull@1",
+        "BluetoothDeviceOverviewEarbudsFull@1",
+        "BluetoothDeviceOverviewEarphoneCaseCompact@1",
+        "BluetoothDeviceOverviewEarphoneCompact@1",
+        "BluetoothDeviceOverviewHero@1",
+        "CountdownOverviewFull@1",
+        "CountdownOverviewHero@1",
+        "CountdownOverviewSupport@1",
+        "HeartRateOverviewCompact@1",
+        "HeartRateOverviewFull@1",
+        "HeartRateOverviewHero@1",
+        "HeartRateOverviewIconCompact@1",
+        "HeartRateOverviewIconHero@1",
+        "HeartRateOverviewMinMaxFull@1",
+        "HeartRateOverviewSupport@1",
+        "HeartRateOverviewUpdatedHero@1",
+        "HeartRateOverviewUpdatedIconHero@1",
+        "ResourceUsageOverviewCompact@1",
+        "ResourceUsageOverviewFull@1",
+        "ResourceUsageOverviewSupport@1",
+        "ScheduleOverviewDateFull@1",
+        "ScheduleOverviewDateSupport@1",
+        "ScheduleOverviewDatedAllDayHero@1",
+        "ScheduleOverviewDatedMeetingHero@1",
+        "ScheduleOverviewEventCountDetailsHero@1",
+        "ScheduleOverviewHeroContent@1",
+        "ScheduleOverviewLocationDescriptionEndFull@1",
+        "ScheduleOverviewLocationHero@1",
+        "ScheduleOverviewLocationSupport@1",
+        "ScheduleOverviewMeetingSourceWideFull@1",
+        "ScheduleOverviewMeetingWideFull@1",
+        "ScheduleOverviewNextEventHero@1",
+        "ScheduleOverviewNextEventLocationFull@1",
+        "ScheduleOverviewReminderDetailsHero@1",
+        "ScheduleOverviewReminderHero@1",
+        "ScheduleOverviewStartTimeSupport@1",
+        "ScheduleOverviewTimeSupport@1",
+        "ScheduleOverviewTimezoneAllDayFull@1",
+        "ScheduleOverviewTimezoneDateEndFull@1",
+        "ScheduleOverviewTimezoneFull@1",
+        "ScheduleOverviewTitleHero@1",
+        "SleepOverviewCompact@1",
+        "SleepOverviewFull@1",
+        "SleepOverviewHero@1",
+        "SleepOverviewNapFull@1",
+        "SleepOverviewNapHero@1",
+        "SleepOverviewSupport@1",
+        "WeatherOverviewAirQualityHero@1",
+        "WeatherOverviewAlertFull@1",
+        "WeatherOverviewCareAlertFull@1",
+        "WeatherOverviewCompact@1",
+        "WeatherOverviewConditionHero@1",
+        "WeatherOverviewDailyCompareFull@1",
+        "WeatherOverviewDailyDateFull@1",
+        "WeatherOverviewDailyHealthFull@1",
+        "WeatherOverviewDailyRainFull@1",
+        "WeatherOverviewFull@1",
+        "WeatherOverviewHero@1",
+        "WeatherOverviewHeroTitle@1",
+        "WeatherOverviewHumidityFull@1",
+        "WeatherOverviewTemperatureSupport@1",
+        "WeatherOverviewTemperatureUvSupport@1",
+        "WeatherOverviewTemperaturecoldLevelSupport@1",
+        "WeatherOverviewUvCompact@1",
+        "WeatherOverviewUvFull@1",
+        "WeatherOverviewWindHero@1",
+        "WorkoutOverviewCompact@1",
+        "WorkoutOverviewFull@1",
+        "WorkoutOverviewHero@1",
+        "WorkoutOverviewSupport@1"
+      ]
+    },
+    {
+      "foreground": "#E61F4595",
+      "backgrounds": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "ActivityOverviewCompact@1",
+        "ActivityOverviewFull@1",
+        "ActivityOverviewHero@1",
+        "ActivityOverviewSupport@1",
+        "ActivityOverviewWideFull@1",
+        "ActivityOverviewWideHero@1",
+        "AppUsageOverviewCompact@1",
+        "AppUsageOverviewFull@1",
+        "AppUsageOverviewHero@1",
+        "AppUsageOverviewSupport@1",
+        "AppUsageOverviewWideFull@1",
+        "AppUsageOverviewWideHero@1",
+        "BatteryOverviewChargingProgressFull@1",
+        "BatteryOverviewChargingProgressHero@1",
+        "BatteryOverviewChargingRingHero@1",
+        "BatteryOverviewCompact@1",
+        "BatteryOverviewFull@1",
+        "BatteryOverviewHealthLevelHero@1",
+        "BatteryOverviewHero@1",
+        "BatteryOverviewPercentRingHero@1",
+        "BatteryOverviewStatusSupport@1",
+        "BatteryOverviewSupport@1",
+        "BatteryOverviewTemperatureFull@1",
+        "BatteryOverviewWideFull@1",
+        "BluetoothDeviceOverviewChargeSupport@1",
+        "BluetoothDeviceOverviewCompleteWideFull@1",
+        "BluetoothDeviceOverviewConnectionSupport@1",
+        "BluetoothDeviceOverviewEarbudPairCompact@1",
+        "BluetoothDeviceOverviewEarbudPairFull@1",
+        "BluetoothDeviceOverviewEarbudsDynamicWideFull@1",
+        "BluetoothDeviceOverviewEarbudsFull@1",
+        "BluetoothDeviceOverviewEarbudsSupport@1",
+        "BluetoothDeviceOverviewEarphoneCaseCompact@1",
+        "BluetoothDeviceOverviewEarphoneCaseHero@1",
+        "BluetoothDeviceOverviewEarphoneCompact@1",
+        "BluetoothDeviceOverviewEarphoneHero@1",
+        "BluetoothDeviceOverviewHero@1",
+        "CountdownOverviewFull@1",
+        "CountdownOverviewHero@1",
+        "CountdownOverviewSupport@1",
+        "HeartRateOverviewCompact@1",
+        "HeartRateOverviewFull@1",
+        "HeartRateOverviewHero@1",
+        "HeartRateOverviewIconCompact@1",
+        "HeartRateOverviewIconHero@1",
+        "HeartRateOverviewMinMaxFull@1",
+        "HeartRateOverviewSupport@1",
+        "HeartRateOverviewUpdatedHero@1",
+        "HeartRateOverviewUpdatedIconHero@1",
+        "ResourceUsageOverviewCompact@1",
+        "ResourceUsageOverviewFull@1",
+        "ResourceUsageOverviewSupport@1",
+        "ScheduleOverviewDateFull@1",
+        "ScheduleOverviewDateSupport@1",
+        "ScheduleOverviewDatedAllDayHero@1",
+        "ScheduleOverviewDatedMeetingHero@1",
+        "ScheduleOverviewEventCountDetailsHero@1",
+        "ScheduleOverviewHeroContent@1",
+        "ScheduleOverviewLocationDescriptionEndFull@1",
+        "ScheduleOverviewLocationHero@1",
+        "ScheduleOverviewLocationSupport@1",
+        "ScheduleOverviewMeetingSourceWideFull@1",
+        "ScheduleOverviewMeetingWideFull@1",
+        "ScheduleOverviewNextEventHero@1",
+        "ScheduleOverviewNextEventLocationFull@1",
+        "ScheduleOverviewReminderDetailsHero@1",
+        "ScheduleOverviewReminderHero@1",
+        "ScheduleOverviewStartTimeSupport@1",
+        "ScheduleOverviewTimeSupport@1",
+        "ScheduleOverviewTimezoneAllDayFull@1",
+        "ScheduleOverviewTimezoneDateEndFull@1",
+        "ScheduleOverviewTimezoneFull@1",
+        "ScheduleOverviewTitleHero@1",
+        "SleepOverviewCompact@1",
+        "SleepOverviewFull@1",
+        "SleepOverviewHero@1",
+        "SleepOverviewNapFull@1",
+        "SleepOverviewNapHero@1",
+        "SleepOverviewSupport@1",
+        "WeatherOverviewAirQualityHero@1",
+        "WeatherOverviewAlertFull@1",
+        "WeatherOverviewCareAlertFull@1",
+        "WeatherOverviewCompact@1",
+        "WeatherOverviewConditionHero@1",
+        "WeatherOverviewDailyDateFull@1",
+        "WeatherOverviewDailyHealthFull@1",
+        "WeatherOverviewDailyRainFull@1",
+        "WeatherOverviewFull@1",
+        "WeatherOverviewHero@1",
+        "WeatherOverviewHumidityFull@1",
+        "WeatherOverviewTemperatureSupport@1",
+        "WeatherOverviewTemperatureUvSupport@1",
+        "WeatherOverviewTemperaturecoldLevelSupport@1",
+        "WeatherOverviewUvCompact@1",
+        "WeatherOverviewUvFull@1",
+        "WeatherOverviewWindHero@1",
+        "WorkoutOverviewCompact@1",
+        "WorkoutOverviewFull@1",
+        "WorkoutOverviewHero@1",
+        "WorkoutOverviewSupport@1"
+      ]
+    },
+    {
+      "foreground": "#E61F4799",
+      "backgrounds": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sources": [
+        "ScheduleOverviewEventCountDetailsHero@1"
+      ]
+    }
+  ]
+}

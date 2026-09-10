@@ -1,7 +1,28 @@
 {
   "defaultPadding": 12,
+  "rootBorderRadius": [18, 20],
+  "minButtonRadius": 18,
   "allowedFontSizes": [10, 12, 14, 16, 18, 20, 32, 40],
+  "allowedFontWeights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
   "allowedSpacing": [0, 2, 4, 6, 8, 10, 12, 14, 16],
+  "titleFontSizes": {
+    "2x2": [12],
+    "2x4": [12, 18]
+  },
+  "titleMaxChars": 8,
+  "maxActionLabelChars": {
+    "2x2": 6,
+    "2x4": 8
+  },
+  "maxExplicitActions": {
+    "2x2": 1,
+    "2x4": 2
+  },
+  "maxLargeNumbers": {
+    "2x2": 1,
+    "2x4": 2
+  },
+  "equalSplitIdTokens": ["equal", "grid", "metrics", "cells"],
   "minClickableSize": 24,
   "maxMeaninglessWhitespace": 18,
   "protectedTextOverflow": ["ellipsis", "clip"]

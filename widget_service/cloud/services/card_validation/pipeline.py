@@ -27,7 +27,11 @@ from .diagnostics import Reporter
 from .display_unit_validator import DisplayUnitValidator
 from .effective_capability_validator import EffectiveCapabilityValidator
 from .expression_validator import ExpressionValidator
+from .fusion_readability_validator import FusionReadabilityValidator
+from .layout_safety_validator import LayoutSafetyValidator
 from .protocol_validator import ProtocolValidator
+from .quality.shape_validator import ShapeValidator
+from .quality.spacing_validator import SpacingValidator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,6 +48,10 @@ STATIC_VALIDATORS = [
 ]
 
 QUALITY_VALIDATORS = [
+    FusionReadabilityValidator(),
+    LayoutSafetyValidator(),
+    ShapeValidator(),
+    SpacingValidator(),
     ContrastValidator(),
 ]
 
@@ -62,6 +70,8 @@ def selected_stages(stage: str) -> list[str]:
         return ["hard"]
     if stage == "semantic":
         return ["hard", "semantic"]
+    # "quality" and "all" both run every declared stage, including the
+    # deterministic quality validators registered above.
     return ["hard", "semantic", "quality"]
 
 

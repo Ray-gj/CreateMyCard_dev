@@ -117,80 +117,110 @@ def _template_components(
     wrapper_ids: tuple[str, ...] = ("template_root",),
     text_color: str = "#FFFFFFFF",
 ) -> list[dict[str, Any]]:
-    components: list[dict[str, Any]] = [{
-        "id": "root",
-        "component": "Column",
-        "children": [wrapper_ids[0]],
-        "styles": {
-            "width": "matchParent",
-            "height": "matchParent",
-            "backgroundColor": "#FFFFFFFF",
-            "padding": 12,
-            "borderRadius": 18,
-            "clip": True,
-        },
-    }]
+    components: list[dict[str, Any]] = [
+        {
+            "id": "root",
+            "component": "Column",
+            "children": [wrapper_ids[0]],
+            "styles": {
+                "width": "matchParent",
+                "height": "matchParent",
+                "backgroundColor": "#FFFFFFFF",
+                "padding": 12,
+                "borderRadius": 18,
+                "clip": True,
+            },
+        }
+    ]
     for index, wrapper_id in enumerate(wrapper_ids):
         child_id = wrapper_ids[index + 1] if index + 1 < len(wrapper_ids) else "label"
-        components.append({
-            "id": wrapper_id,
-            "component": "Column",
-            "children": [child_id],
-        })
-    components.append({
-        "id": "label",
-        "component": "Text",
-        "content": "模板内容",
-        "styles": {"fontColor": text_color},
-    })
+        components.append(
+            {
+                "id": wrapper_id,
+                "component": "Column",
+                "children": [child_id],
+            }
+        )
+    components.append(
+        {
+            "id": "label",
+            "component": "Text",
+            "content": "模板内容",
+            "styles": {"fontColor": text_color},
+        }
+    )
     return components
 
 
 @pytest.mark.parametrize("text_color", ["#FFFFFFFF", "#FF777777"])
-@pytest.mark.parametrize("wrapper_ids", [
-    ("template_root",),
-    ("template_root", "__genui_render_component__template_root", "root_1"),
-])
-def test_template_subtree_skips_contrast_errors_and_warnings(
-    wrapper_ids: tuple[str, ...], text_color: str,
+@pytest.mark.parametrize(
+    "wrapper_ids",
+    [
+        ("template_root",),
+        ("template_root", "__genui_render_component__template_root", "root_1"),
+    ],
+)
+def test_template_marker_alone_checks_contrast_errors_and_warnings(
+    wrapper_ids: tuple[str, ...],
+    text_color: str,
 ) -> None:
     reporter = validate_card(dsl_text=_component_dsl(_template_components(wrapper_ids, text_color)))
 
-    assert not reporter.has_code("VISUAL.CONTRAST")
+    contrast = [item for item in reporter.diagnostics if item.code == "VISUAL.CONTRAST"]
+    assert len(contrast) == 1
+    assert contrast[0].severity == ("error" if text_color == "#FFFFFFFF" else "warning")
 
 
-def test_template_root_text_itself_skips_contrast() -> None:
+def test_template_root_text_alone_checks_contrast() -> None:
     components = _template_components()
     components[1] = {
-        "id": "template_root", "component": "Text", "content": "模板根文本",
+        "id": "template_root",
+        "component": "Text",
+        "content": "模板根文本",
         "styles": {"fontColor": "#FFFFFFFF"},
     }
     reporter = validate_card(dsl_text=_component_dsl(components[:2]))
 
-    assert not reporter.has_code("VISUAL.CONTRAST")
-
-
-@pytest.mark.parametrize("template_first", [True, False])
-def test_template_subtree_does_not_skip_non_template_siblings(template_first: bool) -> None:
-    components = _template_components()
-    children = ["template_root", "external"]
-    components[0]["children"] = children if template_first else list(reversed(children))
-    components.append({
-        "id": "external", "component": "Text", "content": "非模板内容",
-        "styles": {"fontColor": "#FFFFFFFF"},
-    })
-    reporter = validate_card(dsl_text=_component_dsl(components))
-
     contrast = [item for item in reporter.diagnostics if item.code == "VISUAL.CONTRAST"]
     assert len(contrast) == 1
     assert contrast[0].severity == "error"
-    assert "/external/" in contrast[0].json_pointer
 
 
-@pytest.mark.parametrize("wrapper_id", [
-    "template_root_0", "other_template_root", "Template_root",
-    "__genui_render_component__template_root", "regular",
-])
+@pytest.mark.parametrize("template_first", [True, False])
+def test_template_and_non_template_siblings_both_check_contrast(template_first: bool) -> None:
+    components = _template_components()
+    children = ["template_root", "external"]
+    components[0]["children"] = children if template_first else list(reversed(children))
+    components.append(
+        {
+            "id": "external",
+            "component": "Text",
+            "content": "非模板内容",
+            "styles": {"fontColor": "#FFFFFFFF"},
+        }
+    )
+    reporter = validate_card(dsl_text=_component_dsl(components))
+
+    contrast = [item for item in reporter.diagnostics if item.code == "VISUAL.CONTRAST"]
+    assert len(contrast) == 2
+    assert all(item.severity == "error" for item in contrast)
+    pointers = {item.json_pointer for item in contrast}
+    assert pointers == {
+        "/updateComponents/componentsById/label/styles/fontColor",
+        "/updateComponents/componentsById/external/styles/fontColor",
+    }
+
+
+@pytest.mark.parametrize(
+    "wrapper_id",
+    [
+        "template_root_0",
+        "other_template_root",
+        "Template_root",
+        "__genui_render_component__template_root",
+        "regular",
+    ],
+)
 def test_contrast_exemption_requires_exact_template_root_id(wrapper_id: str) -> None:
     components = _template_components((wrapper_id,))
     reporter = validate_card(dsl_text=_component_dsl(components))
@@ -206,6 +236,23 @@ def test_unreachable_template_marker_does_not_skip_normal_card() -> None:
     reporter = validate_card(dsl_text=_component_dsl(components))
 
     assert reporter.has_code("VISUAL.CONTRAST")
+
+
+@pytest.mark.parametrize("background_exists", [True, False])
+def test_dual_marker_exemption_requires_existing_background(background_exists: bool) -> None:
+    components = _template_components()
+    children = components[0].get("children")
+    assert isinstance(children, list)
+    children.insert(0, "fusionBallBackground")
+    if background_exists:
+        components.append({"id": "fusionBallBackground", "component": "Stack"})
+    reporter = validate_card(dsl_text=_component_dsl(components))
+
+    quality = [item for item in reporter.diagnostics if item.stage == "quality"]
+    if background_exists:
+        assert not quality
+    else:
+        assert reporter.has_code("VISUAL.CONTRAST")
 
 
 def test_gradient_does_not_retain_uncovered_default_background() -> None:
@@ -269,12 +316,12 @@ def test_gradient_still_reports_when_multiple_samples_have_low_contrast() -> Non
 
     reporter = validate_card(dsl_text=_component_dsl(components))
 
-    contrast = [
-        item for item in reporter.diagnostics if item.code == "VISUAL.CONTRAST"
-    ]
+    contrast = [item for item in reporter.diagnostics if item.code == "VISUAL.CONTRAST"]
     assert len(contrast) == 1
-    assert contrast[0].severity == "warning"
+    assert contrast[0].severity == "error"
     assert contrast[0].actual < 3
+    assert "render review" not in contrast[0].message
+    assert "only if" not in contrast[0].fix_hint
 
 
 @pytest.mark.parametrize(
@@ -309,18 +356,27 @@ def test_dynamic_text_also_participates_in_contrast_validation(content: Any) -> 
     assert reporter.has_code("VISUAL.CONTRAST")
 
 
-@pytest.mark.parametrize(("field", "value", "expected_code"), [
-    ("component", "UnsupportedTemplateComponent", "DSL_COMPONENT_UNKNOWN"),
-    ("content", "{{ ${/data/missing} }}", "BINDING_PATH_NOT_FOUND"),
-    ("content", "{{ }}", "EXPR_PARSE_FAILED"),
-    ("onClick", [{"call": "unknownTemplateAction", "args": {}}], "EVENT_CAPABILITY_UNKNOWN"),
-    ("undeclaredField", True, "DSL_FIELD_FORBIDDEN"),
-])
+@pytest.mark.parametrize(
+    ("field", "value", "expected_code"),
+    [
+        ("component", "UnsupportedTemplateComponent", "DSL_COMPONENT_UNKNOWN"),
+        ("content", "{{ ${/data/missing} }}", "BINDING_PATH_NOT_FOUND"),
+        ("content", "{{ }}", "EXPR_PARSE_FAILED"),
+        ("onClick", [{"call": "unknownTemplateAction", "args": {}}], "EVENT_CAPABILITY_UNKNOWN"),
+        ("undeclaredField", True, "DSL_FIELD_FORBIDDEN"),
+    ],
+)
 def test_template_subtree_retains_other_validation(
-    field: str, value: Any, expected_code: str,
+    field: str,
+    value: Any,
+    expected_code: str,
 ) -> None:
     components = _template_components()
-    components[-1][field] = value
+    children = components[0].get("children")
+    assert isinstance(children, list)
+    children.insert(0, "fusionBallBackground")
+    components.append({"id": "fusionBallBackground", "component": "Stack"})
+    components[-2][field] = value
     reporter = validate_card(dsl_text=_component_dsl(components))
 
     assert reporter.has_code(expected_code)

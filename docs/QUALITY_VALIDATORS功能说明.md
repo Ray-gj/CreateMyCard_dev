@@ -2,11 +2,11 @@
 
 ## 1. 文档定位与执行机制
 
-本文依据 2026-09-09 当前工作区源码和配置，介绍标准 A2UI 质量校验器，供开发和排障使用，不代表线上部署状态。正式约束以 [云侧方案设计](云侧方案设计.md) 为准，本文不新增协议或规则。
+本文依据 2026-09-11 当前工作区源码和配置，介绍标准 A2UI 质量校验器，供开发和排障使用，不代表线上部署状态。正式约束以 [云侧方案设计](云侧方案设计.md) 为准，本文不新增协议或规则。
 
-入口为 `widget_service/cloud/services/card_validation/pipeline.py`。当前共注册 12 项，即 11 个扩展美学校验器加 1 个对比度校验器。
+入口为 `widget_service/cloud/services/card_validation/pipeline.py`。当前完整质量管线注册 13 项：10 个扩展美学校验器，加融球专项、Stack 文字分区和通用对比度校验器。
 
-> 文档差异：《美学校验设计成果总结》仍有“11 个扩展校验器未进入生产执行列表”的历史描述，而当前源码已注册全部 12 项。本文记录源码事实，不代替已有文档的确认与同步，也不推断部署状态。
+> 2026-09-11：移除 AssetQualityValidator；SlotValidator 取消 SLOT.ORDER，保留内容区域存在性与标题字号检查。基础 AssetValidator 不受此次调整影响。
 
 | 请求阶段 | 执行阶段 | 质量检查 |
 |---|---|---|
@@ -16,7 +16,7 @@
 
 开启 `stop_on_stage_error` 时，前序错误可以阻止进入质量阶段。具体规则还会根据尺寸、组件类型、场景和字段可解析性跳过。校验器生成诊断，不自动修改卡片，也不直接适用于尚未转换的 Compact DSL。
 
-扩展规则默认报 `error`，只有 `ICON.DUPLICATE_SRC` 报 `warning`；对比度自行决定级别。前 11 项共使用 21 个独立诊断码，对比度另使用 `VISUAL.CONTRAST`。
+扩展规则默认报 `error`，只有 `ICON.DUPLICATE_SRC` 报 `warning`；对比度自行决定级别。扩展规则的诊断以各节说明为准，对比度使用 `VISUAL.CONTRAST`。
 
 **诊断错误不等于交付失败。** 正式方案规定产物校验默认开启、失败重试默认关闭；开启重试后最多重新生成一次，仍失败时记录日志并保存最后一次输出。当前产物校验失败属于非阻断质量观测，不直接把生成响应改为 `failed`。
 
@@ -26,10 +26,10 @@
 
 | 上下文字段 | 含义及消费者 |
 |---|---|
-| `context.components` | 解析后的组件列表；Color、Gradient、AssetQuality、Icon、Shape、Typography、Copy、Spacing 扫描全集 |
+| `context.components` | 解析后的组件列表；Color、Gradient、Icon、Shape、Typography、Copy、Spacing 扫描全集 |
 | `context.components_by_id` | ID 到组件的索引，用于引用解析与树遍历，不是要求在原始 DSL 新增同名结构 |
-| `context.root_id` | 解析出的根 ID；Shape 确定根，Spacing 选择安全根，Slot、Density、Layout2x4、Contrast 从根分析 |
-| `context.cardspec.suggestSize` | 正式尺寸来源；Copy、Slot、Density、Layout2x4 直接读取，不维护重复 card_size 字段 |
+| `context.root_id` | 解析出的根 ID；Shape 确定根，Spacing 选择安全根，Slot、Density、Contrast 从根分析 |
+| `context.cardspec.suggestSize` | 正式尺寸来源；Copy、Slot、Density 直接读取，不维护重复 card_size 字段 |
 | `context.data_model` | 已解析的首帧数据；Copy 和 Density 用来获取可展示文本 |
 | `rules.layout / style / asset` | RuleRegistry 加载相应 JSON 后提供的配置对象 |
 
@@ -96,8 +96,8 @@
 | 字段路径 | 读取和判断 |
 |---|---|
 | `styles.linearGradient / radialGradient` | 缺失或 `null` 跳过；非字典报错后跳过该渐变后续检查 |
-| `linearGradient.direction` | 非空字符串即满足方向条件，此时不要求 angle 合法 |
-| `linearGradient.angle` | 方向不满足时检查非布尔数值，范围 0～360，含端点 |
+| `linearGradient.angle` | 必须为非布尔数值，范围 0～360，含端点；渐变背景使用 angle + colors 格式 |
+
 | `radialGradient.center` | 仅检查真值，不验证内部坐标字段 |
 | `gradient.colors` | 必须是至少两个元素的列表 |
 | `gradient.colors[j][0]` | `static_color()` 要求静态八位颜色；动态颜色不满足 |
@@ -108,30 +108,9 @@
 
 源码：`widget_service/cloud/services/card_validation/quality/gradient_validator.py`。
 
-### 2.3 AssetQualityValidator：图片来源
+### 2.3 AssetQualityValidator：已移除
 
-目的：控制不受信任的远程素材与内嵌图片。
-
-检查 `Image.src` 和 `styles.backgroundImage`，拒绝识别到的 `data:image...`、`data:;base64...`。HTTP/HTTPS 图片按解析出的主机名核对允许名单；未配置允许主机时会触发诊断。
-
-诊断码：`ASSET.REMOTE_SRC`。
-
-边界：动态表达式跳过。本地路径通过不代表文件存在或已授权。不检查分辨率、清晰度、内容和风格，也不是完整 URI 安全检查器。
-
-#### 字段与代码判定
-
-| 字段路径 | 读取和判断 |
-|---|---|
-| `component / src` | 仅 Image 收集 src；非字符串来源跳过 |
-| `styles.backgroundImage` | 所有组件都可检查，不限 Image |
-| `rules.asset_allowed_hosts` | 实际读取的主机集合，缺失时为空集合 |
-| `rules.asset.allowedRemoteHosts` | RuleRegistry 从 `config/asset.json` 加载后构造上述集合 |
-
-来源去首尾空白，再按小写前缀判断动态表达式、Data URI 和 HTTP/HTTPS。主机取 `urlparse(source).hostname`；名单项去空白、转小写后精确匹配，不做通配符或子域后缀匹配。
-
-本校验器不直接读取 `asset.forbiddenPatterns`、`asset.allowlist` 或当前产物的有效素材路径集合。因此通过本项不等于素材获得授权，配置主机名单也不意味着任意网络图可用，仍以正式方案和完整链路为准。诊断位置是组件的 `src` 或 `styles/backgroundImage`。
-
-源码：`widget_service/cloud/services/card_validation/quality/asset_quality_validator.py`。
+`AssetQualityValidator` 已从当前质量校验管线和源码中移除，本节历史说明不再代表当前生效规则。
 
 ### 2.4 IconValidator：重复图标
 
@@ -163,13 +142,13 @@
 
 | 诊断码 | 当前规则 |
 |---|---|
-| `SHAPE.CARD_ROOT_RADIUS` | 根组件圆角必须为 `18vp` 或 `20vp`，不允许中间值 |
+| `SHAPE.CARD_ROOT_RADIUS` | 根组件圆角必须为 `20vp`，不允许中间值 |
 | `SHAPE.BUTTON_RADIUS` | 按钮已声明的数值圆角不小于 `18vp` |
 | `SHAPE.RADIUS_FAMILY` | 多个按钮已声明的数值圆角保持一致 |
 
 例如两个按钮分别使用 `18vp` 和 `20vp`，都满足最小值，但仍触发一致性问题。
 
-边界：根圆角缺失会报错；按钮未声明圆角，不会由当前最小圆角检查主动补报。一致性仅针对 `Button`，不是所有可点击组件。
+边界：根圆角缺失或不是 20vp 会报错；按钮未声明圆角，不会由当前最小圆角检查主动补报。一致性仅针对 `Button`，不是所有可点击组件。
 
 #### 字段与代码判定
 
@@ -181,9 +160,9 @@
 | `rules.layout.rootBorderRadius` | 单值表示固定圆角，列表表示离散允许值；元素须可解析且非负，按原顺序去重 |
 | `rules.layout.minButtonRadius` | 可解析且非负时覆盖默认 18 |
 
-非法根圆角配置回退默认离散档位 `(18.0, 20.0)`。根没有字典 styles，或圆角缺失、不可解析、越界，都会报错。非根圆角不可解析时跳过按钮圆角统计。
+非法根圆角配置回退固定默认值 `(20.0,)`。根没有字典 styles，或圆角缺失、不可解析、越界，都会报错。非根圆角不可解析时跳过按钮圆角统计。
 
-例如配置 `[18,20]` 时只允许 18 或 20，18.5、19、19.5 均不合法；配置为 18 时只接受精确值 18，提示为“18vp”而不是“18–18vp”。按钮圆角集合为 `{18,20}` 时，圆角体系错误定位在组件集合，actual 为排序后的圆角值。
+例如配置为 `[20]` 时只允许 20；其它数值均不合法。按钮圆角集合为 `{18,20}` 时，圆角体系错误定位在组件集合，actual 为排序后的圆角值。
 
 源码：`widget_service/cloud/services/card_validation/quality/shape_validator.py`。
 
@@ -297,12 +276,11 @@
 | 诊断码 | 触发条件 |
 |---|---|
 | `SLOT.MODEL_REQUIRED` | 内容区域没有可解析子组件 |
-| `SLOT.ORDER` | 最后一个含操作区域不在末尾 |
 | `AREA.TITLE_TEXT_TIER` | 首个区域内识别到的标题数值字号不合尺寸档位 |
 
 标题字号：2×2 为 `12vp`，2×4 为 `12vp` 或 `18vp`。标题识别依赖 ID 中的 `title`、`header`、`kicker`。
 
-边界：不强制标题、正文、操作三个区域全部存在；找不到标题时跳过字号检查。顺序规则只检查最后一个操作区域的位置，不禁止其他区域包含操作。
+边界：不强制标题、正文、操作三个区域全部存在；找不到标题时跳过字号检查。不限制操作区域的位置，已取消 SLOT.ORDER。
 
 #### 字段与代码判定
 
@@ -311,7 +289,6 @@
 | `context.root_id / components_by_id` | quality_scene() 选择初始内容根；根不可解析则跳过 |
 | `children` | children_of() 仅解析列表中已登记的字符串 ID，未知引用不计作区域 |
 | 包装容器 `component / onClick` | Row、Column、Stack、List 仅一个容器子项且自身无直接操作时继续穿透 |
-| 区域及后代的 `onClick` | contains_action() 把非空点击列表视为操作 |
 | 首区域后代 `component / id` | 寻找首个符合标题 ID 关键词的 Text |
 | 标题 `styles.fontSize` | 可解析时才核对标题字号 |
 | `context.cardspec.suggestSize` | 2x4 默认集合为 {12,18}，其他默认 {12} |
@@ -319,7 +296,7 @@
 
 这里仍使用 quality_scene() 的严格融球识别：外层 Stack 恰好两个有序子项，首个 fusionBallBackground，第二个内容 ID 有登记前缀，并校验背景槽和装饰组件类型、引用结构。它与 Spacing 的 `_safe_root_id()` 不同。
 
-例如三个区域中操作下标为 [0,2] 时不报顺序错误，因为最后操作在末尾；下标为 [1] 则报错。区域错误定位 `componentsById/{区域根ID}/children`，标题错误定位标题字号。
+操作可以位于任意区域。内容区域存在性错误定位 `componentsById/{区域根ID}/children`，标题错误定位标题字号。
 
 源码：`widget_service/cloud/services/card_validation/quality/slot_validator.py`。
 
@@ -337,7 +314,7 @@
 
 源码：`widget_service/cloud/services/card_validation/quality/density_validator.py`。
 
-### 2.11 Layout2x4Validator：2×4 布局尺寸
+### 2.11 Layout2x4Validator（已移除）：2×4 布局尺寸
 
 目的：发现已声明尺寸造成的溢出及等分不一致。只针对 2×4，从 `320×160vp` 初始参考空间出发，递归检查 `Row`、`Column`。
 
@@ -346,7 +323,7 @@
 - 等分：容器 ID 包含 `equal`、`grid`、`metrics`、`cells` 时，按扣除 padding 和间距后的空间核对等分。
 - 尺寸比较允许 `1vp` 误差。
 
-诊断码：`LAYOUT2X4.CLOSURE`、`LAYOUT2X4.EQUAL_SPLIT`。
+诊断码：`LAYOUT2X4.CLOSURE`、`LAYOUT2X4.EQUAL_SPLIT（历史规则）`。
 
 边界：子项尺寸未全部确定时跳过等分检查。不完整模拟弹性布局、动态文字和未知尺寸；占用检查主要发现超出，不要求普通容器恰好填满。
 
@@ -371,7 +348,7 @@
 
 未知子项尺寸只将已知 margin 纳入最低占用，并取消等分判断；递归遇到当前容器未知宽高时使用父参考空间。这些估算不能解释为真实渲染结果。
 
-源码：`widget_service/cloud/services/card_validation/quality/layout_2x4_validator.py`。
+`Layout2x4Validator` 已从当前质量管线移除，相关说明仅保留历史记录。
 
 ### 2.12 ContrastValidator：文字对比度
 
@@ -424,7 +401,7 @@
 | Typography / Slot | 通用字体档位 / 标题区域字号 |
 | Copy / Density | 单条文案长度 / 操作和大数字数量 |
 | Spacing / Layout2x4 | 间距规范 / 尺寸是否装得下 |
-| AssetQuality / Icon | 来源是否允许 / 同区域是否重复 |
+| Icon | 同区域是否重复 |
 
 `AestheticBaselineValidator` 不属于本列表，它位于静态校验列表，负责 emoji 图标和极小字号等最小审美硬基线。
 
@@ -448,7 +425,7 @@
 |---|---|
 | Color | `color_validator.py` |
 | Gradient | `gradient_validator.py` |
-| AssetQuality | `asset_quality_validator.py` |
+| AssetQuality | 已移除，不再注册 |
 | Icon | `icon_validator.py` |
 | Shape | `shape_validator.py` |
 | Typography | `typography_validator.py` |

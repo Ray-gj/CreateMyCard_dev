@@ -9,13 +9,13 @@ from .common import add, component_pointer, iter_components
 class ShapeValidator(BaseValidator):
     stage = "quality"
     name = "shape"
-    root_radius_values = (18.0, 20.0)
+    root_radius_values = (20.0,)
 
     def validate(self, context: Any, rules: Any, reporter: Any) -> None:
         root_radius_values = self._root_radius_values(rules)
         radius_labels = [f"{value:g}" for value in root_radius_values]
         radius_label = " 或 ".join(radius_labels)
-        min_button_radius = 18.0
+        min_button_radius = 14.0
         if rules is not None:
             configured_button_radius = numeric(rules.layout.get("minButtonRadius"))
             if configured_button_radius is not None and configured_button_radius >= 0:

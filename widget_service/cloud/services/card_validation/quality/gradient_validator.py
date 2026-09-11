@@ -79,9 +79,6 @@ class GradientValidator(BaseValidator):
     def _has_position(key: str, gradient: dict[str, Any]) -> bool:
         if key == "radialGradient":
             return bool(gradient.get("center"))
-        direction = gradient.get("direction")
-        if isinstance(direction, str) and direction.strip():
-            return True
         angle = gradient.get("angle")
         if isinstance(angle, bool) or not isinstance(angle, (int, float)):
             return False

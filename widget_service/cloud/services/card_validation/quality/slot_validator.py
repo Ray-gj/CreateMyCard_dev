@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..base import BaseValidator, numeric
-from .common import add, children_of, contains_action, quality_scene
+from .common import add, children_of, quality_scene
 
 _CONTAINERS = {"Row", "Column", "Stack", "List"}
 _TITLE_TOKENS = ("title", "header", "kicker")
@@ -29,20 +29,6 @@ class SlotValidator(BaseValidator):
                 ">= 1",
             )
             return
-        action_indexes = [
-            index
-            for index, child in enumerate(children)
-            if contains_action(child, context.components_by_id)
-        ]
-        if action_indexes and action_indexes[-1] != len(children) - 1:
-            add(
-                reporter,
-                "SLOT.ORDER",
-                self._children_pointer(content_root),
-                "操作区域应位于最后。",
-                action_indexes,
-                "title, content, action",
-            )
         title = self._find_title(children[0], context.components_by_id)
         if title is None:
             return

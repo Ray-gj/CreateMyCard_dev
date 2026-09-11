@@ -29,7 +29,6 @@ from .expression_validator import ExpressionValidator
 from .fusion_readability_validator import FusionReadabilityValidator
 from .layout_safety_validator import LayoutSafetyValidator
 from .protocol_validator import ProtocolValidator
-from .quality.asset_quality_validator import AssetQualityValidator
 from .quality.color_validator import ColorValidator
 from .quality.copy_validator import CopyValidator
 from .quality.density_validator import DensityValidator
@@ -69,7 +68,6 @@ QUALITY_VALIDATORS = [
     DensityValidator(),
     Layout2x4Validator(),
     GradientValidator(),
-    AssetQualityValidator(),
 ]
 
 FUSION_QUALITY_VALIDATORS = [FusionReadabilityValidator()]

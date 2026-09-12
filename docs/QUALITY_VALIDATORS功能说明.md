@@ -4,7 +4,7 @@
 
 本文依据 2026-09-11 当前工作区源码和配置，介绍标准 A2UI 质量校验器，供开发和排障使用，不代表线上部署状态。正式约束以 [云侧方案设计](云侧方案设计.md) 为准，本文不新增协议或规则。
 
-入口为 `widget_service/cloud/services/card_validation/pipeline.py`。当前完整质量管线注册 13 项：10 个扩展美学校验器，加融球专项、Stack 文字分区和通用对比度校验器。
+入口为 `widget_service/cloud/services/card_validation/pipeline.py`。当前完整质量管线注册 8 项：5 个扩展美学校验器，加融球专项、布局安全和通用对比度校验器。
 
 > 2026-09-11：移除 AssetQualityValidator；SlotValidator（已移除） 取消 SLOT.ORDER，保留内容区域存在性与标题字号检查。基础 AssetValidator 不受此次调整影响。
 
@@ -16,7 +16,7 @@
 
 开启 `stop_on_stage_error` 时，前序错误可以阻止进入质量阶段。具体规则还会根据尺寸、组件类型、场景和字段可解析性跳过。校验器生成诊断，不自动修改卡片，也不直接适用于尚未转换的 Compact DSL。
 
-扩展规则默认报 `error`，只有 `ICON.DUPLICATE_SRC` 报 `warning`；对比度自行决定级别。扩展规则的诊断以各节说明为准，对比度使用 `VISUAL.CONTRAST`。
+扩展规则默认报 `error`，当前已注册扩展规则均为 `error`；对比度自行决定级别。扩展规则的诊断以各节说明为准，对比度使用 `VISUAL.CONTRAST`。
 
 **诊断错误不等于交付失败。** 正式方案规定产物校验默认开启、失败重试默认关闭；开启重试后最多重新生成一次，仍失败时记录日志并保存最后一次输出。当前产物校验失败属于非阻断质量观测，不直接把生成响应改为 `failed`。
 
@@ -157,7 +157,7 @@
 | `context.root_id` 与组件 `id` | 相等即视为根，不按固定名称猜测 |
 | `styles.borderRadius` | 用 numeric() 解析；根要求精确命中允许档位 |
 | `component = Button` | 检查最小圆角，并将已解析圆角放入去重集合 |
-| `rules.layout.rootBorderRadius` | 单值表示固定圆角，列表表示离散允许值；元素须可解析且非负，按原顺序去重 |
+| `rules.layout.defaultPadding` | 数值可解析即采用，默认 12vp |
 | `rules.layout.minButtonRadius` | 可解析且非负时覆盖默认 18 |
 
 非法根圆角配置回退固定默认值 `(20.0,)`。根没有字典 styles，或圆角缺失、不可解析、越界，都会报错。非根圆角不可解析时跳过按钮圆角统计。

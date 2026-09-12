@@ -1,8 +1,5 @@
 {
   "defaultPadding": 12,
-  "rootBorderRadius": [
-    20
-  ],
   "minButtonRadius": 14,
   "buttonRadius": 16,
   "iconRadius": 4,

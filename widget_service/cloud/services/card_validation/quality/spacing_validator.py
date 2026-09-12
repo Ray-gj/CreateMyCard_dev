@@ -37,6 +37,9 @@ class SpacingValidator(BaseValidator):
         safe_label = "根容器" if safe_root_id == context.root_id else "内容容器"
         padding_steps = self._field_steps(rules, "allowedPadding", allowed)
         margin_steps = self._field_steps(rules, "allowedMargin", allowed)
+        size = context.cardspec.get("suggestSize")
+        card_width = {"2x2": 160.0, "2x4": 320.0}.get(size)
+        title_width = {"2x2": 112.0, "2x4": 272.0}.get(size)
         for index, component in iter_components(context):
             styles = component.get("styles")
             if not isinstance(styles, dict):
@@ -81,6 +84,93 @@ class SpacingValidator(BaseValidator):
                 component_pointer(index, gap_field),
                 component.get(gap_field),
                 allowed,
+            )
+            self._check_explicit_width(
+                reporter,
+                index,
+                component,
+                safe_root_id,
+                card_width,
+            )
+            self._check_title_width(reporter, index, component, title_width)
+            self._check_button_padding(reporter, index, component)
+
+    @staticmethod
+    def _check_explicit_width(
+        reporter: Any,
+        index: int,
+        component: dict[str, Any],
+        safe_root_id: str | None,
+        card_width: float | None,
+    ) -> None:
+        if card_width is None or component.get("id") == safe_root_id:
+            return
+        styles = component.get("styles")
+        width = numeric(styles.get("width")) if isinstance(styles, dict) else None
+        if width is None:
+            return
+        margin = spacing_tuple(styles.get("margin")) if isinstance(styles, dict) else None
+        horizontal_margin = margin[1] + margin[3] if margin else 0.0
+        if width + horizontal_margin > card_width - 24:
+            add(
+                reporter,
+                "SPACING.SAFE_AREA_OVERFLOW",
+                component_pointer(index, "styles/width"),
+                "元素宽度超出左右 12vp 安全区域。",
+                width + horizontal_margin,
+                f"<= {card_width - 24:g}",
+            )
+
+    @staticmethod
+    def _check_title_width(
+        reporter: Any,
+        index: int,
+        component: dict[str, Any],
+        max_width: float | None,
+    ) -> None:
+        if max_width is None or component.get("component") != "Text":
+            return
+        component_id = component.get("id")
+        if not isinstance(component_id, str) or not any(
+            token in component_id.lower() for token in ("title", "header", "kicker")
+        ):
+            return
+        styles = component.get("styles")
+        width = numeric(styles.get("width")) if isinstance(styles, dict) else None
+        if width is not None and width > max_width:
+            add(
+                reporter,
+                "SPACING.TITLE_WIDTH",
+                component_pointer(index, "styles/width"),
+                "标题区域宽度超过卡片尺寸允许值。",
+                width,
+                f"<= {max_width:g}",
+            )
+        if isinstance(styles, dict) and width is not None and width >= max_width:
+            if styles.get("maxLines") != 1 or styles.get("textOverflow") != "ellipsis":
+                add(
+                    reporter,
+                    "SPACING.TEXT_OVERFLOW",
+                    component_pointer(index, "styles"),
+                    "达到标题区域宽度上限时必须使用单行省略截断。",
+                    styles,
+                    {"maxLines": 1, "textOverflow": "ellipsis"},
+                )
+
+    @staticmethod
+    def _check_button_padding(reporter: Any, index: int, component: dict[str, Any]) -> None:
+        if component.get("component") != "Button":
+            return
+        styles = component.get("styles")
+        padding = spacing_tuple(styles.get("padding")) if isinstance(styles, dict) else None
+        if padding is not None and (padding[1] < 8 or padding[3] < 8):
+            add(
+                reporter,
+                "SPACING.BUTTON_CONTENT_PADDING",
+                component_pointer(index, "styles/padding"),
+                "按钮内容到左右边缘的最小内边距为 8vp。",
+                padding,
+                ">= 8vp",
             )
 
     @staticmethod

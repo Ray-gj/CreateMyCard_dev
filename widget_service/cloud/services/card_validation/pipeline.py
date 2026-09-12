@@ -20,20 +20,18 @@ from .binding_validator import BindingValidator
 from .cardspec_validator import CardSpecValidator
 from .component_validator import ComponentValidator
 from .context import ValidationContext
-from .contrast_validator import ContrastValidator
 from .cross_validator import CrossValidator
 from .diagnostics import Reporter
 from .display_unit_validator import DisplayUnitValidator
 from .effective_capability_validator import EffectiveCapabilityValidator
 from .expression_validator import ExpressionValidator
-from .fusion_readability_validator import FusionReadabilityValidator
-from .layout_safety_validator import LayoutSafetyValidator
 from .protocol_validator import ProtocolValidator
 from .quality.color_validator import ColorValidator
+from .quality.contrast_validator import ContrastValidator
 from .quality.copy_validator import CopyValidator
+from .quality.fusion_readability_validator import FusionReadabilityValidator
 from .quality.gradient_validator import GradientValidator
-from .quality.icon_validator import IconValidator
-from .quality.shape_validator import ShapeValidator
+from .quality.layout_safety_validator import LayoutSafetyValidator
 from .quality.spacing_validator import SpacingValidator
 from .quality.typography_validator import TypographyValidator
 
@@ -54,12 +52,10 @@ STATIC_VALIDATORS = [
 QUALITY_VALIDATORS = [
     FusionReadabilityValidator(),
     LayoutSafetyValidator(),
-    ShapeValidator(),
     SpacingValidator(),
     ContrastValidator(),
     TypographyValidator(),
     ColorValidator(),
-    IconValidator(),
     CopyValidator(),
     GradientValidator(),
 ]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .base import BaseValidator
+from ..base import BaseValidator
 from .color_math import _contrast, approved_color_pair
 from .fusion_background import (
     _Background,

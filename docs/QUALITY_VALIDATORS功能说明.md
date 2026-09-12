@@ -26,7 +26,7 @@
 
 | 上下文字段 | 含义及消费者 |
 |---|---|
-| `context.components` | 解析后的组件列表；Color、Gradient、Icon、Shape、Typography、Copy、Spacing 扫描全集 |
+| `context.components` | 解析后的组件列表；Color、Gradient、Typography、Copy、Spacing 扫描全集 |
 | `context.components_by_id` | ID 到组件的索引，用于引用解析与树遍历，不是要求在原始 DSL 新增同名结构 |
 | `context.root_id` | 解析出的根 ID；Shape 确定根，Spacing 选择安全根，Contrast 从根分析 |
 | `context.cardspec.suggestSize` | 正式尺寸来源；Copy 直接读取，不维护重复 card_size 字段 |
@@ -112,7 +112,7 @@
 
 `AssetQualityValidator` 已从当前质量校验管线和源码中移除，本节历史说明不再代表当前生效规则。
 
-### 2.4 IconValidator：重复图标
+### 2.4 IconValidator（已移除）：重复图标
 
 目的：提醒同一区域存在重复图片，降低视觉冗余。
 
@@ -134,9 +134,9 @@
 
 例如两个图片的父集合都是 `{row_a}` 且原始 src 相同，会被分为一组；父集合分别为 `{row_a}` 和 `{row_b}` 则不同。分组用原始 src，不做路径归一化，也不以背景图字段参与统计。
 
-源码：`widget_service/cloud/services/card_validation/quality/icon_validator.py`。
+`IconValidator` 已从当前质量管线移除，相关说明仅保留历史记录。
 
-### 2.5 ShapeValidator：圆角体系
+### 2.5 ShapeValidator（已移除）：圆角体系
 
 目的：保持根卡片外形与按钮风格一致。
 
@@ -164,7 +164,7 @@
 
 例如配置为 `[20]` 时只允许 20；其它数值均不合法。按钮圆角集合为 `{18,20}` 时，圆角体系错误定位在组件集合，actual 为排序后的圆角值。
 
-源码：`widget_service/cloud/services/card_validation/quality/shape_validator.py`。
+`ShapeValidator` 已从当前质量管线移除，相关说明仅保留历史记录。
 
 ### 2.6 TypographyValidator：字体规范
 

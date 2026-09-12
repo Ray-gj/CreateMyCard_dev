@@ -26,7 +26,7 @@ def _collect(
     pairs: dict[str, dict[str, Any]],
     visited: set[str],
 ) -> None:
-    from services.card_validation.contrast_validator import (
+    from services.card_validation.quality.contrast_validator import (
         _composite_candidates,
         _gradient_color_samples,
         _rgba,

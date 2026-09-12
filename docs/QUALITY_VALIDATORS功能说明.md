@@ -6,7 +6,7 @@
 
 入口为 `widget_service/cloud/services/card_validation/pipeline.py`。当前完整质量管线注册 13 项：10 个扩展美学校验器，加融球专项、Stack 文字分区和通用对比度校验器。
 
-> 2026-09-11：移除 AssetQualityValidator；SlotValidator 取消 SLOT.ORDER，保留内容区域存在性与标题字号检查。基础 AssetValidator 不受此次调整影响。
+> 2026-09-11：移除 AssetQualityValidator；SlotValidator（已移除） 取消 SLOT.ORDER，保留内容区域存在性与标题字号检查。基础 AssetValidator 不受此次调整影响。
 
 | 请求阶段 | 执行阶段 | 质量检查 |
 |---|---|---|
@@ -28,8 +28,8 @@
 |---|---|
 | `context.components` | 解析后的组件列表；Color、Gradient、Icon、Shape、Typography、Copy、Spacing 扫描全集 |
 | `context.components_by_id` | ID 到组件的索引，用于引用解析与树遍历，不是要求在原始 DSL 新增同名结构 |
-| `context.root_id` | 解析出的根 ID；Shape 确定根，Spacing 选择安全根，Slot、Density、Contrast 从根分析 |
-| `context.cardspec.suggestSize` | 正式尺寸来源；Copy、Slot、Density 直接读取，不维护重复 card_size 字段 |
+| `context.root_id` | 解析出的根 ID；Shape 确定根，Spacing 选择安全根，Density、Contrast 从根分析 |
+| `context.cardspec.suggestSize` | 正式尺寸来源；Copy、Density 直接读取，不维护重复 card_size 字段 |
 | `context.data_model` | 已解析的首帧数据；Copy 和 Density 用来获取可展示文本 |
 | `rules.layout / style / asset` | RuleRegistry 加载相应 JSON 后提供的配置对象 |
 
@@ -267,7 +267,7 @@
 
 源码：`widget_service/cloud/services/card_validation/quality/spacing_validator.py`。
 
-### 2.9 SlotValidator：区域组织
+### 2.9 SlotValidator（已移除）：区域组织
 
 目的：检查内容区域、操作顺序与标题层级。
 
@@ -298,7 +298,7 @@
 
 操作可以位于任意区域。内容区域存在性错误定位 `componentsById/{区域根ID}/children`，标题错误定位标题字号。
 
-源码：`widget_service/cloud/services/card_validation/quality/slot_validator.py`。
+`SlotValidator` 已从当前质量管线移除，相关说明仅保留历史记录。
 
 ### 2.10 DensityValidator：大字号数字密度
 

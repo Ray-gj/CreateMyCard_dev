@@ -35,7 +35,6 @@ from .quality.density_validator import DensityValidator
 from .quality.gradient_validator import GradientValidator
 from .quality.icon_validator import IconValidator
 from .quality.shape_validator import ShapeValidator
-from .quality.slot_validator import SlotValidator
 from .quality.spacing_validator import SpacingValidator
 from .quality.typography_validator import TypographyValidator
 
@@ -61,7 +60,6 @@ QUALITY_VALIDATORS = [
     ContrastValidator(),
     TypographyValidator(),
     ColorValidator(),
-    SlotValidator(),
     IconValidator(),
     CopyValidator(),
     DensityValidator(),

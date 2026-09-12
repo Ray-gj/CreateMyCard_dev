@@ -64,10 +64,13 @@
       20
     ]
   },
-  "titleMaxChars": 8,
+  "titleMaxChars": {
+    "2x2": 9,
+    "2x4": 22
+  },
   "maxActionLabelChars": {
     "2x2": 6,
-    "2x4": 8
+    "2x4": 6
   },
   "maxLargeNumbers": {
     "2x2": 1,

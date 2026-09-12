@@ -20,16 +20,7 @@ class CopyValidator(BaseValidator):
             suggest_size,
             default_action_limit,
         )
-        title_limit = 8
-        if rules is not None:
-            configured_title_limit = rules.layout.get("titleMaxChars")
-            valid_title_limit = (
-                isinstance(configured_title_limit, int)
-                and not isinstance(configured_title_limit, bool)
-                and configured_title_limit > 0
-            )
-            if valid_title_limit:
-                title_limit = configured_title_limit
+        title_limit = self._size_limit(rules, "titleMaxChars", suggest_size, 9)
         for index, component in iter_components(context):
             if component.get("component") == "Button":
                 self._check_value(

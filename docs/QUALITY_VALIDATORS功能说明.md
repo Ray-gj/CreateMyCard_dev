@@ -201,8 +201,8 @@
 
 | 类型 | 2×2 | 2×4 | 诊断码 |
 |---|---:|---:|---|
-| 标题 | 最多 8 字符 | 最多 8 字符 | `COPY.TITLE_MAX_CHARS` |
-| 操作 | 最多 6 字符 | 最多 8 字符 | `COPY.ACTION_LABEL_MAX_CHARS` |
+| 标题 | 最多 9 字符 | 最多 22 字符 | `COPY.TITLE_MAX_CHARS` |
+| 操作 | 最多 6 字符 | 最多 6 字符 | `COPY.ACTION_LABEL_MAX_CHARS` |
 
 `Button.label` 和有非空点击处理列表的 `Text.content` 作为操作文案。ID 包含 `title`、`header`、`kicker` 的 `Text` 作为标题，忽略大小写；同时满足两类时按操作处理。
 
@@ -214,15 +214,15 @@
 
 | 字段路径 | 用途与回退 |
 |---|---|
-| `context.cardspec.suggestSize` | 正式尺寸；操作长度默认仅 2x4 为 8，其余为 6 |
+| `context.cardspec.suggestSize` | 正式尺寸；标题长度按尺寸为 2x2 9、2x4 22；按钮长度按尺寸均为 6 |
 | `component / label` | Button 检查 label，不要求声明点击处理 |
 | `id / onClick / content` | 识别标题、操作型 Text 并检查 content |
 | `context.data_model` | 供 display_text() 解析首帧文本 |
 | 文案对象的 `path` | 字符串路径通过 read_pointer() 取值，不在字典分支解析其他任意表达式字段 |
 | `rules.layout.titleMaxChars` | 非布尔正整数才采用，否则默认 8 |
-| `rules.layout.maxActionLabelChars[suggestSize]` | 对应尺寸的非布尔正整数才采用，否则回退尺寸默认值 |
+| `rules.layout.titleMaxChars[suggestSize]` 与 `rules.layout.maxActionLabelChars[suggestSize]` | 对应尺寸的非布尔正整数才采用，否则回退尺寸默认值 |
 
-例如标题路径绑定在首帧解析出 9 个字符会报错；不能解析为可用标量则跳过。直接字符串先去首尾空白，路径读出的字符串按返回长度计算。布尔、列表和字典不是计数标量。诊断定位 label 或 content，actual 是字符数，不是整段文案。
+例如 2x2 标题路径绑定在首帧解析出 10 个字符会报错；不能解析为可用标量则跳过。直接字符串先去首尾空白，路径读出的字符串按返回长度计算。布尔、列表和字典不是计数标量。诊断定位 label 或 content，actual 是字符数，不是整段文案。
 
 源码：`widget_service/cloud/services/card_validation/quality/copy_validator.py`。
 

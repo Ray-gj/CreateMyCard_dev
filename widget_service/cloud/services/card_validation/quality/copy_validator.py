@@ -13,7 +13,7 @@ class CopyValidator(BaseValidator):
 
     def validate(self, context: Any, rules: Any, reporter: Any) -> None:
         suggest_size = context.cardspec.get("suggestSize")
-        default_action_limit = 8 if suggest_size == "2x4" else 6
+        default_action_limit = 6
         action_limit = self._size_limit(
             rules,
             "maxActionLabelChars",

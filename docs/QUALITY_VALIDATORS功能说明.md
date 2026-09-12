@@ -28,8 +28,8 @@
 |---|---|
 | `context.components` | 解析后的组件列表；Color、Gradient、Icon、Shape、Typography、Copy、Spacing 扫描全集 |
 | `context.components_by_id` | ID 到组件的索引，用于引用解析与树遍历，不是要求在原始 DSL 新增同名结构 |
-| `context.root_id` | 解析出的根 ID；Shape 确定根，Spacing 选择安全根，Density、Contrast 从根分析 |
-| `context.cardspec.suggestSize` | 正式尺寸来源；Copy、Density 直接读取，不维护重复 card_size 字段 |
+| `context.root_id` | 解析出的根 ID；Shape 确定根，Spacing 选择安全根，Contrast 从根分析 |
+| `context.cardspec.suggestSize` | 正式尺寸来源；Copy 直接读取，不维护重复 card_size 字段 |
 | `context.data_model` | 已解析的首帧数据；Copy 和 Density 用来获取可展示文本 |
 | `rules.layout / style / asset` | RuleRegistry 加载相应 JSON 后提供的配置对象 |
 
@@ -300,7 +300,7 @@
 
 `SlotValidator` 已从当前质量管线移除，相关说明仅保留历史记录。
 
-### 2.10 DensityValidator：大字号数字密度
+### 2.10 DensityValidator（已移除）：大字号数字密度
 
 2026-09-10 取消显式操作数量上限和默认只保留一个主要操作的限制，多操作不再触发密度错误或警告。
 不再读取 `maxExplicitActions`。仅统计从根节点可达且去重后的大字号数字文本。
@@ -312,7 +312,7 @@
 上限读取 `rules.layout.maxLargeNumbers[suggestSize]`，仅接受非布尔非负整数。
 通过首帧数据解析绑定文本；未声明有效尺寸时跳过。超限输出 error，actual 为数量。
 
-源码：`widget_service/cloud/services/card_validation/quality/density_validator.py`。
+`DensityValidator` 已从当前质量管线移除，相关说明仅保留历史记录。
 
 ### 2.11 Layout2x4Validator（已移除）：2×4 布局尺寸
 

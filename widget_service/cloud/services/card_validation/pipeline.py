@@ -31,7 +31,6 @@ from .layout_safety_validator import LayoutSafetyValidator
 from .protocol_validator import ProtocolValidator
 from .quality.color_validator import ColorValidator
 from .quality.copy_validator import CopyValidator
-from .quality.density_validator import DensityValidator
 from .quality.gradient_validator import GradientValidator
 from .quality.icon_validator import IconValidator
 from .quality.shape_validator import ShapeValidator
@@ -62,7 +61,6 @@ QUALITY_VALIDATORS = [
     ColorValidator(),
     IconValidator(),
     CopyValidator(),
-    DensityValidator(),
     GradientValidator(),
 ]
 

@@ -8,8 +8,8 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from .base import BaseValidator
-from .quality.common import children_of, component_pointer
+from ..base import BaseValidator
+from .common import children_of, component_pointer
 
 _ALIGNMENTS = {
     "topStart": (0.0, 0.0),

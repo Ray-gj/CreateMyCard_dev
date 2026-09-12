@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .base import BaseValidator
+from ..base import BaseValidator
 from .color_math import (
     RgbaColor as RgbaColor,
 )

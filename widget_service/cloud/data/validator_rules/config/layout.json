@@ -4,6 +4,8 @@
     20
   ],
   "minButtonRadius": 14,
+  "buttonRadius": 16,
+  "iconRadius": 4,
   "allowedFontSizes": [
     8,
     9.14,

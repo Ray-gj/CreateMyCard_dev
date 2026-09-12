@@ -15,11 +15,17 @@ class ShapeValidator(BaseValidator):
         root_radius_values = self._root_radius_values(rules)
         radius_labels = [f"{value:g}" for value in root_radius_values]
         radius_label = " 或 ".join(radius_labels)
-        min_button_radius = 14.0
+        button_radius = 16.0
+        icon_radius = 4.0
         if rules is not None:
-            configured_button_radius = numeric(rules.layout.get("minButtonRadius"))
+            configured_button_radius = numeric(rules.layout.get("buttonRadius"))
+            if configured_button_radius is None:
+                configured_button_radius = numeric(rules.layout.get("minButtonRadius"))
             if configured_button_radius is not None and configured_button_radius >= 0:
-                min_button_radius = configured_button_radius
+                button_radius = configured_button_radius
+            configured_icon_radius = numeric(rules.layout.get("iconRadius"))
+            if configured_icon_radius is not None and configured_icon_radius >= 0:
+                icon_radius = configured_icon_radius
         radii: set[float] = set()
         configured_radii = rules.layout.get("allowedButtonRadii") if rules is not None else None
         allowed_radii: set[float] = set()
@@ -55,16 +61,31 @@ class ShapeValidator(BaseValidator):
                 )
             if radius is None:
                 continue
-            if component.get("component") == "Button" and radius < min_button_radius:
+            component_type = component.get("component")
+            is_icon = component_type == "Icon" or (
+                component_type == "Image"
+                and isinstance(component.get("id"), str)
+                and "icon" in component["id"].lower()
+            )
+            if component_type == "Button" and radius != button_radius:
                 add(
                     reporter,
                     "SHAPE.BUTTON_RADIUS",
                     component_pointer(index, "styles/borderRadius"),
-                    f"按钮圆角应不小于 {min_button_radius:g}vp。",
+                    f"按钮圆角必须为 {button_radius:g}vp。",
                     radius,
-                    f">= {min_button_radius:g}",
+                    button_radius,
                 )
-            if component.get("component") == "Button":
+            if is_icon and radius != icon_radius:
+                add(
+                    reporter,
+                    "SHAPE.ICON_RADIUS",
+                    component_pointer(index, "styles/borderRadius"),
+                    f"图标圆角必须为 {icon_radius:g}vp。",
+                    radius,
+                    icon_radius,
+                )
+            if component_type == "Button":
                 radii.add(radius)
         if len(radii) > 1 and not radii.issubset(allowed_radii):
             add(

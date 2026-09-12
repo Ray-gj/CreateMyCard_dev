@@ -233,13 +233,19 @@
 | 诊断码 | 当前规则 |
 |---|---|
 | `SPACING.SAFE_MARGIN` | 内容根四边 padding 必须均为 `12vp` |
-| `SPACING.SCALE` | 间距属于 `0、2、4、6、8、10、12、14、16` |
+| `SPACING.SCALE` | 按配置分别检查 padding、margin 和组件间距的登记档位；无有效配置时使用默认档位 |
+| `SPACING.SAFE_AREA_OVERFLOW` | 非安全根且具有明确数值宽度的组件，宽度与水平 margin 合计不得超过安全区域：2×2 为 `136vp`、2×4 为 `296vp` |
+| `SPACING.BUTTON_CONTENT_PADDING` | 对具有 styles 的 Button 检查左右 padding 不少于 `8vp`；缺失 padding 按零处理 |
 
-检查 `styles.padding`、`styles.margin`，以及 `List.space` 或其他组件的 `itemMargin`。
+检查 `styles.padding`、`styles.margin`，以及 `List.space` 或其他组件的 `itemMargin`。对具有明确数值宽度的元素，还按卡片尺寸检查水平安全区域预算；按钮检查左右内容内边距。
+
+2026-09-12 下架 `SPACING.TITLE_WIDTH` 和 `SPACING.TEXT_OVERFLOW`。Spacing 不再根据标题 ID、
+112/272vp 的标题宽度上限或 `maxLines` / `textOverflow` 判断标题是否合规。
+标题仍参与通用安全区域检查；本次下架不取消 Copy 的标题字数限制，也不限制生成侧继续使用省略截断。
 
 对满足当前包装结构条件的融球或模板前景，安全边距检查选中的前景根，不强制外层背景壳增加 padding；具体选择见本节字段说明。
 
-边界：`12vp` 是精确值，不是最小值。当前 `_safe_root_id()` 检查包装根与前景条件，但融球分支不验证整套装饰子树，不同于 Slot 使用的严格场景识别。不测量真实渲染内容与边缘的距离。
+边界：`12vp` 是安全根 padding 的精确值，不是最小值。元素越界检查只对明确数值宽度生效，无法从 DSL 推导位置或尺寸时跳过；标题图标间距、按钮文字与图标间距、标题/内容/按钮区域之间的 8vp 关系仍需显式布局信息后才能判断。当前 `_safe_root_id()` 检查包装根与前景条件，不测量真实渲染坐标。
 
 #### 字段与代码判定
 
@@ -252,7 +258,8 @@
 | `styles.margin` | 核对已提供值的间距档位 |
 | 顶层 `space / itemMargin` | List 读 space，其他组件读 itemMargin，不是 styles 内字段 |
 | `rules.layout.allowedSpacing` | 列表中非布尔数值形成集合，无有效值时回退默认 |
-| `rules.layout.defaultPadding` | numeric() 可解析即采用，默认 12；此处不额外限制配置非负 |
+| `rules.layout.defaultPadding` | numeric() 可解析即采用，默认 12；仅控制安全根 padding 检查，显式宽度预算仍按固定左右各 12vp 计算 |
+| `CardSpec.suggestSize` | 读取 `2x2`/`2x4`，分别确定 160/320vp 卡片宽度；未知或缺失时跳过显式宽度预算检查，不再决定标题宽度上限 |
 
 当前安全根选择步骤：
 

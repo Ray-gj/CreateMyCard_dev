@@ -53,13 +53,14 @@ class ContrastValidator(BaseValidator):
         root_child_ids = root_children if isinstance(root_children, list) else []
         is_fusion_scene = _FUSION_BACKGROUND_ID in root_child_ids
         is_normal_scene = _NORMAL_ROOT_ID in root_child_ids
+        if is_fusion_scene and not is_normal_scene:
+            return
         self._walk(
             context,
             reporter,
             root,
             [(1.0, 1.0, 1.0)],
             is_gradient=False,
-            is_fusion_scene=is_fusion_scene and not is_normal_scene,
             approved_pairs=approved_pairs,
         )
 
@@ -71,7 +72,6 @@ class ContrastValidator(BaseValidator):
         backgrounds: list[RgbColor],
         *,
         is_gradient: bool,
-        is_fusion_scene: bool,
         approved_pairs: list[dict[str, Any]],
     ) -> None:
         styles = component.get("styles")
@@ -102,23 +102,6 @@ class ContrastValidator(BaseValidator):
         if component.get("component") == "Text" and self._has_text(component.get("content")):
             color_key = "fontColor" if "fontColor" in styles else "textColor"
             foreground = styles.get(color_key)
-            if is_fusion_scene:
-                component_id = component.get("id")
-                pointer = f"/updateComponents/componentsById/{component_id}/styles/{color_key}"
-                reporter.add(
-                    "warning",
-                    "VISUAL.CONTRAST",
-                    self.stage,
-                    "genui",
-                    line=2,
-                    json_pointer=pointer,
-                    actual={"scene": "fusionBall", "requiresRenderReview": True},
-                    expected="端侧渲染后确认文字区域对比度",
-                    message="fusionBall 背景由兄弟装饰层合成，静态对比度不作阻塞判定",
-                    fix_hint="请在端侧渲染后复核文字可读性；仅在实际不可读时调整颜色。",
-                    source="aesthetic-contrast",
-                )
-                return
             ratios = []
             for item in effective_backgrounds:
                 try:
@@ -171,7 +154,6 @@ class ContrastValidator(BaseValidator):
                     child,
                     effective_backgrounds,
                     is_gradient=is_gradient,
-                    is_fusion_scene=is_fusion_scene,
                     approved_pairs=approved_pairs,
                 )
 

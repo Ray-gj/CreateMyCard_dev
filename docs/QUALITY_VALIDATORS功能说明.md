@@ -369,7 +369,7 @@
 
 渐变采样色标及相邻颜色中点。至少三个对比度样本时取第二低值，容忍一个孤立最差样本；报告值低于 `2:1` 时报告 error，要求增强文字与背景对比度；`2:1 ≤ 报告值 < 4.5:1` 时报告 warning，要求渲染复核；达到 `4.5:1` 不报告问题。渐变不再自动将严重低对比度降为警告。
 
-- 融球：背景来自兄弟装饰层合成，输出渲染复核警告，不作静态低对比度错误判定。
+- 融球：由 `FusionReadabilityValidator` 负责展开后结构和固定几何检查；不进入通用文字对比度计算。
 - 模板：遇到 `template_root` 时跳过该子树对比度检查，其他校验器不因此全部豁免。
 - 无可解析背景时从白色参考背景开始合成；前景无法计算时可能不产生诊断。
 
@@ -381,7 +381,7 @@
 | 字段路径 | 用途与注意事项 |
 |---|---|
 | `context.components / root_id / components_by_id` | 缺少组件、根 ID 或可解析根时跳过 |
-| 根 `children` | 含 fusionBallBackground 且不含 root_0 时进入融球复核模式 |
+| 根 `children` | 含 fusionBallBackground 且不含 root_0 时由 pipeline 选择融球专项结构检查 |
 | 组件 `id` | 精确等于 template_root 时返回，不遍历该子树 |
 | `styles.backgroundColor` | 接受六位 RGB 或八位 ARGB；叠加祖先背景，不透明纯色清除继承的渐变标记 |
 | `styles.linearGradient / radialGradient` | 用 linearGradient or radialGradient 选择一个，不同时合成两者 |
@@ -393,7 +393,7 @@
 
 与 Copy 不同，这里不调用 display_text()，也不读取 context.data_model；非空路径绑定字典可进入对比度检查。不读取字号和字重来切换阈值，Button.label 不在该项文字检查内。
 
-纯色或渐变诊断 actual 为保留两位小数的比值；融球诊断为 `{"scene":"fusionBall","requiresRenderReview":true}`。位置为 `/updateComponents/componentsById/{id}/styles/{fontColor或textColor}`。
+纯色或渐变诊断 actual 为保留两位小数的比值；融球专项只产生 `FUSION.STRUCTURE_INVALID`，位置为 `/updateComponents/components`。
 
 六位颜色可参与这里的计算，不代表满足 Color 的八位格式规则。
 
@@ -456,7 +456,7 @@
 1. 排障先看位置、实际值和期望值，区分确定违规、设计建议和渲染复核。
 2. 修改阈值前先确认正式方案；方案变更先同步总方案，再同步配置、实现与测试。
 3. 不依赖 ID 绕过检查，标题、等分及场景标记只是识别线索，不是视觉正确性的证明。
-4. 动态文本、图片背景、渐变及融球保留端侧渲染复核。
+4. 动态文本、图片背景和渐变仍按通用对比度规则处理；融球只按展开后的受控结构检查。
 5. 区分源码注册、入口执行、部署启用、诊断错误和交付失败。
 
 **结论：** 本组校验提供可定位、可解释的静态设计规则检查，能发现明确违规和部分布局风险，但不能替代协议校验、真实渲染和最终视觉验收。

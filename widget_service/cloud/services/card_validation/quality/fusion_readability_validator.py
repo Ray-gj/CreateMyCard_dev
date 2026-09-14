@@ -1,28 +1,306 @@
-"""融球专项可读性：保留模板通用豁免，不将候选球色当作实测背景。"""
+"""融球专项结构校验。
+
+融球在转换层已经展开为标准 A2UI 组件树。本校验器集中解析这棵受控树的
+层次、引用和参考几何，不模拟端侧渲染，也不生成渲染复核诊断。
+"""
 
 from __future__ import annotations
 
+import math
+from dataclasses import dataclass, field
 from typing import Any
 
 from ..base import BaseValidator
-from .color_math import _contrast, approved_color_pair
-from .fusion_background import (
-    _Background,
-    _initial_background,
-    _is_text,
-    _uniform_stack_background,
-    _with_background,
+from .color_math import RgbaColor, _rgba
+
+FUSION_REFERENCE_SIZE = 160
+
+
+@dataclass(frozen=True)
+class FusionBallGeometry:
+    slot_id: str
+    ball_id: str
+    width: int
+    height: int
+    diameter: int
+    alignment: str
+
+
+LARGE_BALL = FusionBallGeometry("fusionBallLargeSlot", "fusionBallLarge", 180, 44, 210, "center")
+MEDIUM_BALL = FusionBallGeometry("fusionBallMediumSlot", "fusionBallMedium", 80, 220, 160, "bottom")
+SMALL_BALL = FusionBallGeometry(
+    "fusionBallSmallSlot", "fusionBallSmall", 195, 190, 100, "bottomEnd"
 )
-from .fusion_geometry import FUSION_REFERENCE_SIZE
-from .fusion_structure import (
-    child_ids,
-    color_of,
-    dimension,
-    inspect_fusion,
-    reachable_fusion,
-    styles_of,
-    visible,
-)
+FUSION_BALL_GEOMETRIES = (LARGE_BALL, MEDIUM_BALL, SMALL_BALL)
+
+
+BACKGROUND_ID = "fusionBallBackground"
+GLASS_ID = "fusionBallGlassLayer"
+
+
+@dataclass
+class FusionStructure:
+    foreground: dict[str, Any] | None = None
+    colors: list[RgbaColor] = field(default_factory=list)
+    glass: RgbaColor | None = None
+    errors: list[dict[str, Any]] = field(default_factory=list)
+
+
+def styles_of(component: dict[str, Any]) -> dict[str, Any]:
+    styles = component.get("styles")
+    return styles if isinstance(styles, dict) else {}
+
+
+def finite_number(value: Any) -> float | None:
+    number: float | None = None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            candidate = float(value)
+        except OverflowError:
+            return number
+        if math.isfinite(candidate):
+            number = candidate
+    return number
+
+
+def dimension(value: Any, parent: float) -> float | None:
+    result = finite_number(value)
+    if value == "matchParent":
+        result = parent
+    elif isinstance(value, str) and value.endswith("%"):
+        try:
+            result = finite_number(float(value.removesuffix("%")) * parent / 100.0)
+        except ValueError:
+            result = None
+    return result
+
+
+def color_of(value: Any) -> RgbaColor | None:
+    result: RgbaColor | None = None
+    if isinstance(value, str):
+        try:
+            result = _rgba(value)
+        except ValueError:
+            # 调用方将无法解析的颜色转成明确诊断，不按默认颜色继续。
+            result = None
+    return result
+
+
+def child_ids(component: dict[str, Any]) -> list[str]:
+    children = component.get("children")
+    result: list[str] = []
+    if isinstance(children, list):
+        for child in children:
+            if isinstance(child, str):
+                result.append(child)
+    elif isinstance(children, dict):
+        template_id = children.get("componentId")
+        if isinstance(template_id, str):
+            result.append(template_id)
+    return result
+
+
+def visible(component: dict[str, Any]) -> bool:
+    visibility = styles_of(component).get("visibility")
+    return visibility not in ("hidden", "none")
+
+
+def reachable_fusion(root: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> bool:
+    pending = [root]
+    visited: set[str] = set()
+    while pending:
+        component = pending.pop()
+        component_id = component.get("id")
+        if not isinstance(component_id, str) or component_id in visited:
+            continue
+        visited.add(component_id)
+        if not visible(component):
+            continue
+        children = child_ids(component)
+        if component_id == BACKGROUND_ID or BACKGROUND_ID in children:
+            return True
+        for child_id in children:
+            child = by_id.get(child_id)
+            if isinstance(child, dict):
+                pending.append(child)
+    return False
+
+
+def _error(
+    result: FusionStructure, component_id: str, key: str, actual: Any, expected: Any
+) -> None:
+    result.errors.append(
+        {"component": component_id, "field": key, "actual": actual, "expected": expected}
+    )
+
+
+def _node(
+    result: FusionStructure,
+    by_id: dict[str, dict[str, Any]],
+    component_id: str,
+    kind: str,
+    children: list[str],
+) -> dict[str, Any] | None:
+    component = by_id.get(component_id)
+    if not isinstance(component, dict):
+        _error(result, component_id, "component", None, kind)
+        return None
+    if component.get("component") != kind:
+        _error(result, component_id, "component", component.get("component"), kind)
+    actual_children = component.get("children", [])
+    if actual_children != children:
+        _error(result, component_id, "children", actual_children, children)
+    styles = styles_of(component)
+    for key in ("margin", "padding"):
+        value = styles.get(key, 0)
+        values = list(value.values()) if isinstance(value, dict) else [value]
+        if any(finite_number(item) != 0.0 for item in values):
+            _error(result, component_id, key, value, 0)
+    # 受控背景不接受额外的布局/绘制效果；不能悄悄忽略它们后声明几何有效。
+    allowed = {
+        "width",
+        "height",
+        "borderRadius",
+        "alignContent",
+        "clip",
+        "margin",
+        "padding",
+        "backgroundColor",
+        "backdropBlur",
+        "strokeWidth",
+        "color",
+        "vertical",
+    }
+    extras = sorted(set(styles) - allowed)
+    if extras:
+        _error(result, component_id, "styles", extras, "受控融球背景样式")
+    return styles
+
+
+def _size(
+    result: FusionStructure,
+    component_id: str,
+    styles: dict[str, Any],
+    parent_width: float,
+    parent_height: float,
+    width: float,
+    height: float,
+) -> None:
+    for key, parent, expected in (
+        ("width", parent_width, width),
+        ("height", parent_height, height),
+    ):
+        actual = dimension(styles.get(key), parent)
+        if actual is None or not math.isclose(actual, expected, abs_tol=0.0001, rel_tol=0.0):
+            _error(
+                result,
+                component_id,
+                key,
+                {"declared": styles.get(key), "resolved": actual},
+                expected,
+            )
+
+
+def _value(
+    result: FusionStructure,
+    component_id: str,
+    styles: dict[str, Any],
+    key: str,
+    expected: Any,
+    default: Any = None,
+) -> None:
+    actual = styles.get(key, default)
+    if actual != expected or isinstance(actual, bool) != isinstance(expected, bool):
+        _error(result, component_id, key, actual, expected)
+
+
+def inspect_fusion(root: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> FusionStructure:
+    result = FusionStructure()
+    children = child_ids(root)
+    valid_order = root.get("children") == children and len(children) == 2
+    if valid_order:
+        valid_order = children[0] == BACKGROUND_ID
+    if root.get("component") != "Stack" or not valid_order:
+        _error(result, "root", "children", children, "Stack 内背景在前，唯一前景在后")
+        return result
+    foreground = by_id.get(children[1])
+    reserved_ids = {BACKGROUND_ID, GLASS_ID, root.get("id")}
+    for geometry in FUSION_BALL_GEOMETRIES:
+        reserved_ids.add(geometry.slot_id)
+        reserved_ids.add(geometry.ball_id)
+    if not isinstance(foreground, dict) or children[1] in reserved_ids:
+        _error(result, children[1], "component", foreground, "独立前景组件")
+    else:
+        result.foreground = foreground
+    root_styles = styles_of(root)
+    _value(result, "root", root_styles, "alignContent", "topStart")
+    _value(result, "root", root_styles, "clip", True)
+    _value(result, "root", root_styles, "padding", 0, 0)
+    slots = [geometry.slot_id for geometry in FUSION_BALL_GEOMETRIES]
+    background = _node(result, by_id, BACKGROUND_ID, "Stack", slots + [GLASS_ID])
+    if background is None:
+        return result
+    reference = float(FUSION_REFERENCE_SIZE)
+    _size(result, BACKGROUND_ID, background, reference, reference, reference, reference)
+    _value(result, BACKGROUND_ID, background, "alignContent", "topStart")
+    _value(result, BACKGROUND_ID, background, "clip", True)
+    for geometry in FUSION_BALL_GEOMETRIES:
+        slot = _node(result, by_id, geometry.slot_id, "Stack", [geometry.ball_id])
+        if slot is None:
+            continue
+        _size(
+            result,
+            geometry.slot_id,
+            slot,
+            reference,
+            reference,
+            float(geometry.width),
+            float(geometry.height),
+        )
+        _value(result, geometry.slot_id, slot, "alignContent", geometry.alignment)
+        _value(result, geometry.slot_id, slot, "clip", False, False)
+        ball = _node(result, by_id, geometry.ball_id, "Divider", [])
+        if ball is None:
+            continue
+        actual_width = dimension(slot.get("width"), reference)
+        actual_height = dimension(slot.get("height"), reference)
+        if actual_width is not None and actual_height is not None:
+            _size(
+                result,
+                geometry.ball_id,
+                ball,
+                actual_width,
+                actual_height,
+                float(geometry.diameter),
+                float(geometry.diameter),
+            )
+        _value(result, geometry.ball_id, ball, "borderRadius", geometry.diameter / 2)
+        _value(result, geometry.ball_id, ball, "clip", True)
+        _value(result, geometry.ball_id, ball, "strokeWidth", 0)
+        color = color_of(ball.get("backgroundColor"))
+        if color is None or color[3] != 1.0:
+            _error(
+                result,
+                geometry.ball_id,
+                "backgroundColor",
+                ball.get("backgroundColor"),
+                "不透明静态颜色",
+            )
+        else:
+            result.colors.append(color)
+    glass = _node(result, by_id, GLASS_ID, "Divider", [])
+    if glass is None:
+        return result
+    _size(result, GLASS_ID, glass, reference, reference, reference, reference)
+    _value(result, GLASS_ID, glass, "strokeWidth", 0)
+    result.glass = color_of(glass.get("backgroundColor"))
+    if result.glass is None:
+        _error(result, GLASS_ID, "backgroundColor", glass.get("backgroundColor"), "静态 ARGB 颜色")
+    blur = glass.get("backdropBlur")
+    radius = finite_number(blur.get("radius")) if isinstance(blur, dict) else None
+    if radius is None or radius < 0.0:
+        _error(result, GLASS_ID, "backdropBlur", blur, "有限非负 radius")
+    return result
 
 
 def _report(
@@ -43,13 +321,17 @@ def _report(
 
 
 class FusionReadabilityValidator(BaseValidator):
+    """校验展开后的融球结构和参考几何。"""
+
     stage = "quality"
     name = "fusion_readability"
 
     def validate(self, context: Any, rules: Any, reporter: Any) -> None:
+        del rules
         root = context.components_by_id.get(context.root_id)
         if not isinstance(root, dict) or not reachable_fusion(root, context.components_by_id):
             return
+
         size = context.cardspec.get("suggestSize")
         styles = styles_of(root)
         reference = float(FUSION_REFERENCE_SIZE)
@@ -57,17 +339,32 @@ class FusionReadabilityValidator(BaseValidator):
             dimension(styles.get("width", "matchParent"), reference),
             dimension(styles.get("height", "matchParent"), reference),
         )
-        if size not in (None, "2x2") or reference_dimensions != (reference, reference):
+
+        # 160×160 是当前受控融球结构的唯一参考几何。其它尺寸不套用这套
+        # 几何，也不发出端侧渲染复核提示；待对应尺寸有正式结构后再增加规则。
+        if size not in (None, "2x2"):
+            return
+        if reference_dimensions != (reference, reference):
             _report(
                 reporter,
-                "FUSION.RENDER_REVIEW_REQUIRED",
-                "warning",
+                "FUSION.STRUCTURE_INVALID",
+                "error",
                 "/updateComponents/root",
-                "当前融球专项仅验证 160×160 的 2x2 参考结构。",
-                {"size": size, "referenceDimensions": reference_dimensions},
-                "按该尺寸的正式融球结构进行渲染复核，不套用 2x2 几何。",
+                "2x2 融球根尺寸不符合 160×160 参考结构。",
+                {
+                    "violations": [
+                        {
+                            "component": "root",
+                            "field": "width/height",
+                            "actual": reference_dimensions,
+                            "expected": (reference, reference),
+                        }
+                    ]
+                },
+                "将 2x2 根宽高调整为参考 160×160，或使用 matchParent。",
             )
             return
+
         structure = inspect_fusion(root, context.components_by_id)
         if structure.errors:
             _report(
@@ -75,209 +372,8 @@ class FusionReadabilityValidator(BaseValidator):
                 "FUSION.STRUCTURE_INVALID",
                 "error",
                 "/updateComponents/components",
-                "融球背景不符合受控几何或层次结构，不能据此计算文字背景。",
+                "融球背景不符合受控几何或层次结构。",
                 {"violations": structure.errors},
                 "按受控融球结构修复背景；百分比相对直接父级解析。"
-                "中球槽应为参考 80×220、中球为 160×160；不要移动或压扁球体来修复颜色。",
+                "中球槽应为参考 80×220、中球为 160×160；不要移动或压扁球体。",
             )
-            return
-        if structure.foreground is not None:
-            initial = _initial_background(structure, root)
-            # 外壳上的整体效果同样作用于前景，不能在局部底板处遗忘。
-            root_effects = _with_background(root, _Background()).effects
-            initial.effects = root_effects
-            self._walk(context, structure.foreground, initial, reporter, rules)
-
-    def _walk(
-        self,
-        context: Any,
-        root: dict[str, Any],
-        initial: _Background,
-        reporter: Any,
-        rules: Any,
-    ) -> None:
-        pending = [(root, initial)]
-        indexes: dict[str, int] = {}
-        for index, component in enumerate(context.components):
-            component_id = component.get("id")
-            if isinstance(component_id, str):
-                indexes[component_id] = index
-        visited: set[str] = set()
-        while pending:
-            component, inherited = pending.pop()
-            component_id = component.get("id")
-            if not isinstance(component_id, str) or not visible(component):
-                continue
-            index = indexes.get(component_id)
-            if index is None:
-                continue
-            pointer = f"/updateComponents/components/{index}"
-            if component_id in visited:
-                _report(
-                    reporter,
-                    "FUSION.RENDER_REVIEW_REQUIRED",
-                    "warning",
-                    pointer,
-                    "前景含循环或共享引用，无法唯一确定背景继承。",
-                    component_id,
-                    "修复组件引用关系后重新检查可读性。",
-                )
-                continue
-            visited.add(component_id)
-            background = _with_background(component, inherited)
-            known_component = component.get("component") in (
-                "Text",
-                "Button",
-                "Row",
-                "Column",
-                "Stack",
-                "List",
-                "Image",
-                "Divider",
-                "Progress",
-                "Checkbox",
-            )
-            if not known_component:
-                _report(
-                    reporter,
-                    "FUSION.RENDER_REVIEW_REQUIRED",
-                    "warning",
-                    pointer,
-                    "前景含未知组件，不能确认其文字与背景绘制行为。",
-                    component.get("component"),
-                    "使用已支持组件，或补充该组件的渲染语义后复核。",
-                )
-            if _is_text(component):
-                self._check_foreground(component, background, pointer, reporter, rules)
-            elif component.get("component") == "Image" and "fillColor" in styles_of(component):
-                self._check_foreground(component, background, pointer, reporter, rules)
-            children = child_ids(component)
-            raw_children = component.get("children")
-            if raw_children is not None and not _complete_children(raw_children, children):
-                _report(
-                    reporter,
-                    "FUSION.RENDER_REVIEW_REQUIRED",
-                    "warning",
-                    pointer + "/children",
-                    "前景子组件引用无法完整解析，检查未完成。",
-                    raw_children,
-                    "补齐合法的子组件数组或模板引用后重新校验。",
-                )
-            visible_children = []
-            for child_id in children:
-                child = context.components_by_id.get(child_id)
-                if not isinstance(child, dict):
-                    _report(
-                        reporter,
-                        "FUSION.RENDER_REVIEW_REQUIRED",
-                        "warning",
-                        pointer + "/children",
-                        "前景引用的组件不存在，检查未完成。",
-                        child_id,
-                        "补齐组件引用后重新校验。",
-                    )
-                elif visible(child):
-                    visible_children.append(child)
-            if component.get("component") == "Stack" and len(visible_children) > 1:
-                composed = _uniform_stack_background(component, visible_children, background)
-                if composed is not None:
-                    pending.append((visible_children[1], composed))
-                    continue
-                background.effects += ("前景 Stack 存在未解析的兄弟叠层",)
-            for child in reversed(visible_children):
-                pending.append((child, background))
-
-    @staticmethod
-    def _check_foreground(
-        component: dict[str, Any],
-        background: _Background,
-        pointer: str,
-        reporter: Any,
-        rules: Any,
-    ) -> None:
-        styles = styles_of(component)
-        key = "fontColor" if "fontColor" in styles else "textColor"
-        icon = component.get("component") == "Image"
-        if icon:
-            key = "fillColor"
-        subject = "图标" if icon else "文字"
-        color = styles.get(key)
-        parsed = color_of(color)
-        location = f"{pointer}/styles/{key}"
-        if parsed is not None and background.color is not None and not background.effects:
-            ratio = _contrast(color, background.color)
-            palette = getattr(rules, "template_contrast", {})
-            approved = approved_color_pair(
-                color, [background.color], palette.get("approvedPairs", [])
-            )
-            if approved:
-                return
-            if icon:
-                if ratio < 3.0:
-                    _report(
-                        reporter,
-                        "FUSION.RENDER_REVIEW_REQUIRED",
-                        "warning",
-                        location,
-                        "图标填充色与确定背景的对比度低于 3:1，请结合素材形状复核辨识度。",
-                        {
-                            "ratio": round(ratio, 4),
-                            "target": "icon",
-                            "backgroundPath": background.path,
-                            "requiresRenderReview": True,
-                        },
-                        "优先调整图标填充色或局部底板；不根据装饰球色修改正式模板。",
-                    )
-                return
-            if ratio < 4.5:
-                severity = "error" if ratio < 2.0 else "warning"
-                _report(
-                    reporter,
-                    "FUSION.TEXT_CONTRAST",
-                    severity,
-                    location,
-                    f"融球卡片局部确定背景上的文字对比度为 {ratio:.2f}:1。",
-                    {
-                        "ratio": round(ratio, 4),
-                        "basis": "opaque-local-background",
-                        "backgroundPath": background.path,
-                        "target": "text",
-                    },
-                    "提高文字与局部底色的对比度，至少达到 2:1，建议达到 4.5:1；"
-                    "优先调整文字颜色、透明度或底板，不缩小字号。",
-                )
-            return
-        reasons = list(dict.fromkeys(background.reasons + background.effects))
-        actual: dict[str, Any] = {
-            "requiresRenderReview": True,
-            "reasons": reasons,
-            "backgroundPath": background.path,
-            "target": "icon" if icon else "text",
-        }
-        if parsed is None:
-            reasons.append(subject + "颜色缺失或无法静态解析")
-        elif background.samples:
-            ratios = [_contrast(color, sample) for sample in background.samples]
-            actual["candidateContrastRange"] = [round(min(ratios), 4), round(max(ratios), 4)]
-            actual["candidateBasis"] = "球色、玻璃及局部纯色或渐变候选；非空间、非模糊测量"
-        if not reasons:
-            reasons.append("无法确定" + subject + "位置的实际背景")
-        _report(
-            reporter,
-            "FUSION.RENDER_REVIEW_REQUIRED",
-            "warning",
-            location,
-            "融球" + subject + "可读性需要复核：" + "；".join(reasons) + "。",
-            actual,
-            "复核目标所在位置的端侧合成结果；优先调整前景颜色、透明度或局部底板。"
-            "候选范围不能作为实测对比度或通过依据，不据此改动正式模板球色。",
-        )
-
-
-def _complete_children(raw: Any, parsed: list[str]) -> bool:
-    complete = False
-    if isinstance(raw, list):
-        complete = len(raw) == len(parsed)
-    elif isinstance(raw, dict):
-        complete = len(parsed) == 1
-    return complete

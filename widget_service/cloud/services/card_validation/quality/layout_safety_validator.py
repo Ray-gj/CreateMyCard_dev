@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
-"""检查 Stack 文字前景的安全分区，不模拟端侧字形测量。"""
+"""检查文字分区和线性布局空间，不模拟端侧字形测量。"""
 
 from __future__ import annotations
 
@@ -158,6 +158,102 @@ def _separated(left: tuple[float, float] | None, right: tuple[float, float] | No
     return left[1] <= right[0] or right[1] <= left[0]
 
 
+def _padding(styles: dict[str, Any], edge: str) -> float:
+    value = styles.get("padding", 0.0)
+    if isinstance(value, dict):
+        value = value.get(edge, 0.0)
+    result = _finite_number(value)
+    return result if result is not None and result >= 0.0 else 0.0
+
+
+def _item_margin(styles: dict[str, Any]) -> float:
+    value = _finite_number(styles.get("itemMargin", 0.0))
+    return value if value is not None and value >= 0.0 else 0.0
+
+
+def _declared_size(component: dict[str, Any], axis: str) -> float | None:
+    value = _finite_number(_styles(component).get(axis))
+    return value if value is not None and value > 0.0 else None
+
+
+def _text_minimum_height(component: dict[str, Any]) -> float | None:
+    styles = _styles(component)
+    declared = _declared_size(component, "height")
+    if declared is not None:
+        return declared
+    font_size = _finite_number(styles.get("fontSize"))
+    if font_size is None or font_size <= 0.0:
+        return None
+    max_lines = _finite_number(styles.get("maxLines", 1))
+    lines = max_lines if max_lines is not None and max_lines > 0.0 else 1.0
+    return font_size * 1.2 * lines
+
+
+def _minimum_size(
+    component: dict[str, Any],
+    by_id: dict[str, dict[str, Any]],
+    visiting: set[str] | None = None,
+) -> tuple[float | None, float | None]:
+    styles = _styles(component)
+    declared_width = _declared_size(component, "width")
+    declared_height = _declared_size(component, "height")
+    kind = component.get("component")
+    if kind == "Text":
+        return declared_width, _text_minimum_height(component)
+    if kind == "Button":
+        return declared_width, declared_height or _text_minimum_height(component)
+    children = _children(component, by_id)
+    if not children:
+        return declared_width, declared_height
+    current_id = component.get("id")
+    active = set() if visiting is None else set(visiting)
+    if isinstance(current_id, str):
+        if current_id in active:
+            return declared_width, declared_height
+        active.add(current_id)
+    measures = [_minimum_size(child, by_id, active) for child in children]
+    child_widths = [item[0] for item in measures if item[0] is not None]
+    child_heights = [item[1] for item in measures if item[1] is not None]
+    margin = _item_margin(styles) * max(len(children) - 1, 0)
+    if kind == "Column":
+        minimum_height = (
+            sum(child_heights) + margin if len(child_heights) == len(children) else None
+        )
+        minimum_width = max(child_widths) if len(child_widths) == len(children) else None
+        return declared_width or (
+            minimum_width
+            + _padding(styles, "left")
+            + _padding(styles, "right")
+            if minimum_width is not None
+            else None
+        ), declared_height or (
+            minimum_height
+            + _padding(styles, "top")
+            + _padding(styles, "bottom")
+            if minimum_height is not None
+            else None
+        )
+    if kind == "Row":
+        minimum_width = (
+            sum(child_widths) + margin if len(child_widths) == len(children) else None
+        )
+        minimum_height = max(child_heights) if len(child_heights) == len(children) else None
+        return declared_width or (
+            minimum_width
+            + _padding(styles, "left")
+            + _padding(styles, "right")
+            if minimum_width is not None
+            else None
+        ), declared_height or (
+            minimum_height
+            + _padding(styles, "top")
+            + _padding(styles, "bottom")
+            if minimum_height is not None
+            else None
+        )
+    return declared_width, declared_height
+
+
 class LayoutSafetyValidator(BaseValidator):
     stage = "quality"
     name = "layout_safety"
@@ -185,11 +281,74 @@ class LayoutSafetyValidator(BaseValidator):
                 continue
             children = _children(component, by_id)
             pending.extend(reversed(children))
-            if component.get("component") != "Stack":
-                continue
             index = indexes.get(component_id)
-            if index is not None:
+            kind = component.get("component")
+            if kind == "Stack" and index is not None:
                 self._check_stack(component, children, by_id, index, reporter)
+            elif kind in {"Column", "Row"} and index is not None:
+                self._check_linear_layout(component, children, by_id, index, reporter)
+
+    @staticmethod
+    def _check_linear_layout(
+        component: dict[str, Any],
+        children: list[dict[str, Any]],
+        by_id: dict[str, dict[str, Any]],
+        index: int,
+        reporter: Any,
+    ) -> None:
+        if not children:
+            return
+        styles = _styles(component)
+        kind = component.get("component")
+        axis = "height" if kind == "Column" else "width"
+        declared = _declared_size(component, axis)
+        if declared is None:
+            return
+        before = _padding(styles, "top" if axis == "height" else "left")
+        after = _padding(styles, "bottom" if axis == "height" else "right")
+        available = declared - before - after
+        if available < 0.0:
+            return
+        child_sizes = []
+        for child in children:
+            minimum_width, minimum_height = _minimum_size(child, by_id)
+            size = minimum_height if axis == "height" else minimum_width
+            if size is None:
+                return
+            child_sizes.append((child, size))
+        required = sum(size for _, size in child_sizes)
+        required += _item_margin(styles) * max(len(child_sizes) - 1, 0)
+        if required <= available:
+            return
+        overflow = required - available
+        conflict_ids = [child.get("id") for child, _ in child_sizes]
+        reporter.add(
+            "error",
+            "LAYOUT.LINEAR_CONTENT_OVERFLOW",
+            "quality",
+            "genui",
+            line=2,
+            json_pointer=component_pointer(index, "children"),
+            actual={
+                "container": component.get("id"),
+                "axis": axis,
+                "available": available,
+                "required": required,
+                "overflow": overflow,
+                "children": conflict_ids,
+            },
+            expected="线性容器的子树最小尺寸、间距和 padding 不超过可用主轴空间",
+            message=(
+                f"{kind} {component.get('id')} 的子内容最小{axis}度为 {required:g}，"
+                f"可用{axis}度为 {available:g}，存在 {overflow:g} 的挤压或重叠风险。"
+            ),
+            fix_hint=(
+                f"请调整 {kind} {component.get('id')} 的固定尺寸、padding、itemMargin "
+                "或子节点布局，确保文字和按钮的最小内容尺寸能够完整容纳。"
+                "不要仅通过裁剪、隐藏内容或盲目增加 flexShrink 消除问题。"
+            ),
+            source="layout-safety",
+        )
 
     @staticmethod
     def _check_stack(

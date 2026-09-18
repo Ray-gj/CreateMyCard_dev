@@ -25,6 +25,8 @@ _REFERENCE_CANVAS_HEIGHT = {
     "2x4": 160.0,
     "4x2": 160.0,
 }
+_TEMPLATE_ROOT_WRAPPER_TYPES = frozenset({"Column", "Stack"})
+_TEMPLATE_SKELETON_ID = "__genui_render_component__root_1"
 _NUMERIC_SCHEMA_TYPES = frozenset({"integer", "number"})
 _COMMON_DISPLAY_UNITS = frozenset(
     {
@@ -272,22 +274,62 @@ def _collect_layout_route_errors(
         component.component_id: component for component in components
     }
     root = components_by_id.get("root")
-    if root is not None and root.component_type == "Row" and len(root.children) == 2:
-        backboards = [components_by_id.get(child_id) for child_id in root.children]
-        if all(
-            backboard is not None
-            and backboard.component_type == "Column"
-            and backboard.props.get("width") == 144
-            and backboard.props.get("height") == 136
-            for backboard in backboards
-        ):
-            return
+    layout_root = _w9_layout_root(root, components_by_id)
+    if layout_root is not None and _has_w9_backboards(layout_root, components_by_id):
+        return
 
     roots = ", ".join(sorted(data_roots))
     errors.append(
-        f"2x4 card displays two data roots ({roots}) and must use W9: root must "
-        "be a Row with exactly two direct 144x136 Column backboards. Do not use "
+        f"2x4 card displays two data roots ({roots}) and must use W9: the layout "
+        "root must be a Row, or a template shell whose only direct child is "
+        "template_root containing the Row directly or through its transparent "
+        "skeleton, with exactly two direct 144x136 Column backboards. Do not use "
         "a shared title, a shared action area, or stacked full-width business rows."
+    )
+
+
+def _w9_layout_root(
+    root: ComponentRow | None,
+    components_by_id: dict[str, ComponentRow],
+) -> ComponentRow | None:
+    """Return the W9 root, allowing the compiler's transparent template wrapper."""
+    if root is None:
+        return None
+    if root.component_type == "Row":
+        return root
+    if root.component_type not in _TEMPLATE_ROOT_WRAPPER_TYPES:
+        return None
+    if root.children != ("template_root",):
+        return None
+    template_root = components_by_id.get("template_root")
+    if template_root is None:
+        return None
+    if template_root.component_type == "Row":
+        return template_root
+    if template_root.component_type not in _TEMPLATE_ROOT_WRAPPER_TYPES:
+        return None
+    if len(template_root.children) != 1:
+        return None
+    skeleton_id = template_root.children[0]
+    if skeleton_id != _TEMPLATE_SKELETON_ID:
+        return None
+    return components_by_id.get(skeleton_id)
+
+
+def _has_w9_backboards(
+    layout_root: ComponentRow,
+    components_by_id: dict[str, ComponentRow],
+) -> bool:
+    """Check the fixed two-column W9 geometry at the selected layout root."""
+    if layout_root.component_type != "Row" or len(layout_root.children) != 2:
+        return False
+    backboards = [components_by_id.get(child_id) for child_id in layout_root.children]
+    return all(
+        backboard is not None
+        and backboard.component_type == "Column"
+        and backboard.props.get("width") == 144
+        and backboard.props.get("height") == 136
+        for backboard in backboards
     )
 
 

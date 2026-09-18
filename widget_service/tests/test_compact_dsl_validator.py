@@ -90,6 +90,199 @@ def test_rejects_empty_container_before_a2ui_conversion(
         )
 
 
+def test_accepts_w9_backboards_inside_template_root_wrapper() -> None:
+    compact_dsl = "\n".join(
+        [
+            (
+                '["root","Column",{"width":"matchParent",'
+                '"height":"matchParent","padding":12},["template_root"]]'
+            ),
+            (
+                '["template_root","Stack",{"width":"matchParent",'
+                '"height":"matchParent"},'
+                '["__genui_render_component__root_1"]]'
+            ),
+            (
+                '["__genui_render_component__root_1","Row",'
+                '{"width":"matchParent","height":"matchParent",'
+                '"itemMargin":8},["left","right"]]'
+            ),
+            '["left","Column",{"width":144,"height":136},["left_value"]]',
+            '["right","Column",{"width":144,"height":136},["right_value"]]',
+            (
+                '["left_value","Text",'
+                '{"content":{"path":"/data/weather/temperature"}}]'
+            ),
+            (
+                '["right_value","Text",'
+                '{"content":{"path":"/data/battery/percent"}}]'
+            ),
+            '["/data/weather/temperature",26]',
+            '["/data/battery/percent",80]',
+        ]
+    )
+
+    result = validate_compact_dsl(
+        compact_dsl,
+        task_spec={
+            "size": "2x4",
+            "dataModelSchema": {
+                "data": {
+                    "weather": {"temperature": {"type": "integer"}},
+                    "battery": {"percent": {"type": "integer"}},
+                }
+            },
+            "assetCandidates": [],
+            "eventCandidates": [],
+        },
+        card_spec={"suggestSize": "2x4", "dataBindings": []},
+    )
+
+    assert result.warnings == ()
+
+
+def test_accepts_w9_backboards_directly_under_template_root() -> None:
+    compact_dsl = "\n".join(
+        [
+            (
+                '["root","Column",{"width":"matchParent",'
+                '"height":"matchParent","padding":12},["template_root"]]'
+            ),
+            (
+                '["template_root","Row",{"width":"matchParent",'
+                '"height":"matchParent","itemMargin":8},["left","right"]]'
+            ),
+            '["left","Column",{"width":144,"height":136},["left_value"]]',
+            '["right","Column",{"width":144,"height":136},["right_value"]]',
+            (
+                '["left_value","Text",'
+                '{"content":{"path":"/data/weather/temperature"}}]'
+            ),
+            (
+                '["right_value","Text",'
+                '{"content":{"path":"/data/battery/percent"}}]'
+            ),
+            '["/data/weather/temperature",26]',
+            '["/data/battery/percent",80]',
+        ]
+    )
+
+    result = validate_compact_dsl(
+        compact_dsl,
+        task_spec={
+            "size": "2x4",
+            "dataModelSchema": {
+                "data": {
+                    "weather": {"temperature": {"type": "integer"}},
+                    "battery": {"percent": {"type": "integer"}},
+                }
+            },
+            "assetCandidates": [],
+            "eventCandidates": [],
+        },
+        card_spec={"suggestSize": "2x4", "dataBindings": []},
+    )
+
+    assert result.warnings == ()
+
+
+def test_rejects_w9_backboards_inside_non_template_wrapper() -> None:
+    compact_dsl = "\n".join(
+        [
+            (
+                '["root","Column",{"width":"matchParent",'
+                '"height":"matchParent","padding":12},["content_root"]]'
+            ),
+            (
+                '["content_root","Row",{"width":"matchParent",'
+                '"height":"matchParent","itemMargin":8},["left","right"]]'
+            ),
+            '["left","Column",{"width":144,"height":136},["left_value"]]',
+            '["right","Column",{"width":144,"height":136},["right_value"]]',
+            (
+                '["left_value","Text",'
+                '{"content":{"path":"/data/weather/temperature"}}]'
+            ),
+            (
+                '["right_value","Text",'
+                '{"content":{"path":"/data/battery/percent"}}]'
+            ),
+            '["/data/weather/temperature",26]',
+            '["/data/battery/percent",80]',
+        ]
+    )
+
+    with pytest.raises(
+        CompactDslValidationError,
+        match="must use W9: the layout root must be a Row",
+    ):
+        validate_compact_dsl(
+            compact_dsl,
+            task_spec={
+                "size": "2x4",
+                "dataModelSchema": {
+                    "data": {
+                        "weather": {"temperature": {"type": "integer"}},
+                        "battery": {"percent": {"type": "integer"}},
+                    }
+                },
+                "assetCandidates": [],
+                "eventCandidates": [],
+            },
+            card_spec={"suggestSize": "2x4", "dataBindings": []},
+        )
+
+
+def test_rejects_non_layout_template_root_wrapper_type() -> None:
+    compact_dsl = "\n".join(
+        [
+            (
+                '["root","List",{"width":"matchParent",'
+                '"height":"matchParent","padding":12},["template_root"]]'
+            ),
+            (
+                '["template_root","List",{"width":"matchParent",'
+                '"height":"matchParent"},'
+                '["__genui_render_component__root_1"]]'
+            ),
+            (
+                '["__genui_render_component__root_1","Row",'
+                '{"width":"matchParent","height":"matchParent",'
+                '"itemMargin":8},["left","right"]]'
+            ),
+            '["left","Column",{"width":144,"height":136},["left_value"]]',
+            '["right","Column",{"width":144,"height":136},["right_value"]]',
+            (
+                '["left_value","Text",'
+                '{"content":{"path":"/data/weather/temperature"}}]'
+            ),
+            (
+                '["right_value","Text",'
+                '{"content":{"path":"/data/battery/percent"}}]'
+            ),
+            '["/data/weather/temperature",26]',
+            '["/data/battery/percent",80]',
+        ]
+    )
+
+    with pytest.raises(CompactDslValidationError, match="must use W9"):
+        validate_compact_dsl(
+            compact_dsl,
+            task_spec={
+                "size": "2x4",
+                "dataModelSchema": {
+                    "data": {
+                        "weather": {"temperature": {"type": "integer"}},
+                        "battery": {"percent": {"type": "integer"}},
+                    }
+                },
+                "assetCandidates": [],
+                "eventCandidates": [],
+            },
+            card_spec={"suggestSize": "2x4", "dataBindings": []},
+        )
+
+
 def test_design_prompt_contains_no_empty_container_examples() -> None:
     prompt = _DESIGN_PROMPT_PATH.read_text(encoding="utf-8")
     empty_container_lines = re.findall(

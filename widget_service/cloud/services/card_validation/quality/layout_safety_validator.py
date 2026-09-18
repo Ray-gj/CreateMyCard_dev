@@ -340,7 +340,7 @@ class LayoutSafetyValidator(BaseValidator):
         available = declared - before - after
         if available < 0.0:
             return
-        child_sizes = []
+        child_sizes: list[tuple[dict[str, Any], float, float]] = []
         weighted_children: list[tuple[dict[str, Any], float, float]] = []
         fixed_required = 0.0
         weight_total = 0.0
@@ -359,7 +359,7 @@ class LayoutSafetyValidator(BaseValidator):
                 weight_total += weight
                 continue
             resolved = declared_child or size
-            child_sizes.append((child, resolved))
+            child_sizes.append((child, size, resolved))
             fixed_required += resolved
         margin = _component_item_margin(component) * max(len(children) - 1, 0)
         remaining = max(available - fixed_required - margin, 0.0)
@@ -372,7 +372,55 @@ class LayoutSafetyValidator(BaseValidator):
             return
         overflow = required - available
         conflict_ids = [child.get("id") for child, _, _ in weighted_children]
-        conflict_ids.extend(child.get("id") for child, _ in child_sizes)
+        conflict_ids.extend(child.get("id") for child, _, _ in child_sizes)
+        space_ledger = []
+        for child, minimum, weight in weighted_children:
+            allocated = remaining * weight / weight_total
+            space_ledger.append(
+                {
+                    "component": child.get("id"),
+                    "minimum": minimum,
+                    "allocated": allocated,
+                    "weight": weight,
+                }
+            )
+        for child, minimum, resolved in child_sizes:
+            space_ledger.append(
+                {
+                    "component": child.get("id"),
+                    "minimum": minimum,
+                    "allocated": resolved,
+                    "fixed": True,
+                }
+            )
+        immutable_constraints = {
+            "container": component.get("id"),
+            "containerSize": {
+                "width": _styles(component).get("width"),
+                "height": _styles(component).get("height"),
+            },
+            "requiredChildren": conflict_ids,
+            "contentMustRemainVisible": True,
+        }
+        allowed_actions = [
+            "reduce_item_margin_or_padding_without_using_negative_values",
+            "reduce_non_protected_text_size_above_the_declared_minimum",
+            "change_row_or_column_axis_only_if_the_cross_axis_budget_passes",
+            "rebalance_layout_weight_after_recomputing_all_sibling_sizes",
+        ]
+        forbidden_actions = [
+            "resize_fixed_root_or_container",
+            "remove_required_children",
+            "clip_or_hide_overflow",
+            "use_negative_spacing_or_margin",
+            "treat_layout_weight_or_flex_shrink_as_a_minimum_size_fix",
+        ]
+        acceptance_conditions = [
+            "required_main_axis_size <= available_main_axis_size",
+            "all_required_children_remain_present",
+            "all_content_remains_visible_without_clipping",
+            "cross_axis_overflow_is_not_introduced",
+        ]
         reporter.add(
             "error",
             "LAYOUT.LINEAR_CONTENT_OVERFLOW",
@@ -387,6 +435,21 @@ class LayoutSafetyValidator(BaseValidator):
                 "required": required,
                 "overflow": overflow,
                 "children": conflict_ids,
+                "repairKind": "layout",
+                "spaceLedger": {
+                    "axis": axis,
+                    "containerSize": declared,
+                    "padding": {"before": before, "after": after},
+                    "itemMargin": _component_item_margin(component),
+                    "available": available,
+                    "required": required,
+                    "deficit": overflow,
+                    "children": space_ledger,
+                },
+                "immutableConstraints": immutable_constraints,
+                "allowedActions": allowed_actions,
+                "forbiddenActions": forbidden_actions,
+                "acceptanceConditions": acceptance_conditions,
             },
             expected="线性容器的子树最小尺寸、间距和 padding 不超过可用主轴空间",
             message=(
@@ -430,6 +493,16 @@ class LayoutSafetyValidator(BaseValidator):
                 conflicts.append([left.component_id, right.component_id])
         if not conflicts:
             return
+        allowed_actions = [
+            "merge_text_branches_into_one_column_or_row",
+            "keep_background_branches_in_the_stack_without_text_content",
+            "reduce_non_protected_content_after_rechecking_linear_space",
+        ]
+        forbidden_actions = [
+            "place_multiple_text_branches_in_the_same_stack_slot",
+            "clip_or_hide_text_content",
+            "use_layout_weight_or_justify_content_as_a_stack_sequencing_fix",
+        ]
         reporter.add(
             "error",
             "LAYOUT.STACK_CONTENT_FLOW",
@@ -437,7 +510,21 @@ class LayoutSafetyValidator(BaseValidator):
             "genui",
             line=2,
             json_pointer=component_pointer(index, "children"),
-            actual={"stack": component.get("id"), "conflictingBranches": conflicts},
+            actual={
+                "stack": component.get("id"),
+                "conflictingBranches": conflicts,
+                "repairKind": "layout",
+                "immutableConstraints": {
+                    "stack": component.get("id"),
+                    "contentMustRemainVisible": True,
+                },
+                "allowedActions": allowed_actions,
+                "forbiddenActions": forbidden_actions,
+                "acceptanceConditions": [
+                    "text_branches_have_non_overlapping_verified_slots",
+                    "all_content_remains_visible_without_clipping",
+                ],
+            },
             expected="单一文字前景容器，或可证明互不相交的文字分支槽位",
             message="Stack 内多个文字前景分支缺少可验证的安全分区，存在内容重叠风险。",
             fix_hint=(

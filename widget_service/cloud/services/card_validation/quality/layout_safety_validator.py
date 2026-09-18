@@ -166,14 +166,37 @@ def _padding(styles: dict[str, Any], edge: str) -> float:
     return result if result is not None and result >= 0.0 else 0.0
 
 
-def _item_margin(styles: dict[str, Any]) -> float:
-    value = _finite_number(styles.get("itemMargin", 0.0))
-    return value if value is not None and value >= 0.0 else 0.0
+def _component_item_margin(component: dict[str, Any]) -> float:
+    value = component.get("itemMargin")
+    if value is None:
+        value = _styles(component).get("itemMargin", 0.0)
+    result = _finite_number(value)
+    return result if result is not None and result >= 0.0 else 0.0
 
 
 def _declared_size(component: dict[str, Any], axis: str) -> float | None:
     value = _finite_number(_styles(component).get(axis))
     return value if value is not None and value > 0.0 else None
+
+
+def _resolved_size(
+    component: dict[str, Any],
+    axis: str,
+    parent: dict[str, Any] | None = None,
+) -> float | None:
+    declared = _declared_size(component, axis)
+    if declared is not None:
+        return declared
+    if parent is None or _styles(component).get(axis) != "matchParent":
+        return None
+    parent_size = _declared_size(parent, axis)
+    if parent_size is None:
+        return None
+    parent_styles = _styles(parent)
+    before = _padding(parent_styles, "top" if axis == "height" else "left")
+    after = _padding(parent_styles, "bottom" if axis == "height" else "right")
+    available = parent_size - before - after
+    return available if available > 0.0 else None
 
 
 def _text_minimum_height(component: dict[str, Any]) -> float | None:
@@ -214,7 +237,7 @@ def _minimum_size(
     measures = [_minimum_size(child, by_id, active) for child in children]
     child_widths = [item[0] for item in measures if item[0] is not None]
     child_heights = [item[1] for item in measures if item[1] is not None]
-    margin = _item_margin(styles) * max(len(children) - 1, 0)
+    margin = _component_item_margin(component) * max(len(children) - 1, 0)
     if kind == "Column":
         minimum_height = (
             sum(child_heights) + margin if len(child_heights) == len(children) else None
@@ -269,10 +292,10 @@ class LayoutSafetyValidator(BaseValidator):
             component_id = component.get("id")
             if isinstance(component_id, str):
                 indexes[component_id] = index
-        pending = [root]
+        pending: list[tuple[dict[str, Any], dict[str, Any] | None]] = [(root, None)]
         visited: set[str] = set()
         while pending:
-            component = pending.pop()
+            component, parent = pending.pop()
             component_id = component.get("id")
             if not isinstance(component_id, str) or component_id in visited:
                 continue
@@ -280,13 +303,20 @@ class LayoutSafetyValidator(BaseValidator):
             if not _visible(component):
                 continue
             children = _children(component, by_id)
-            pending.extend(reversed(children))
+            pending.extend((child, component) for child in reversed(children))
             index = indexes.get(component_id)
             kind = component.get("component")
             if kind == "Stack" and index is not None:
                 self._check_stack(component, children, by_id, index, reporter)
             elif kind in {"Column", "Row"} and index is not None:
-                self._check_linear_layout(component, children, by_id, index, reporter)
+                self._check_linear_layout(
+                    component,
+                    children,
+                    by_id,
+                    index,
+                    reporter,
+                    parent,
+                )
 
     @staticmethod
     def _check_linear_layout(
@@ -295,13 +325,14 @@ class LayoutSafetyValidator(BaseValidator):
         by_id: dict[str, dict[str, Any]],
         index: int,
         reporter: Any,
+        parent: dict[str, Any] | None,
     ) -> None:
         if not children:
             return
         styles = _styles(component)
         kind = component.get("component")
         axis = "height" if kind == "Column" else "width"
-        declared = _declared_size(component, axis)
+        declared = _resolved_size(component, axis, parent)
         if declared is None:
             return
         before = _padding(styles, "top" if axis == "height" else "left")
@@ -310,18 +341,38 @@ class LayoutSafetyValidator(BaseValidator):
         if available < 0.0:
             return
         child_sizes = []
+        weighted_children: list[tuple[dict[str, Any], float, float]] = []
+        fixed_required = 0.0
+        weight_total = 0.0
         for child in children:
             minimum_width, minimum_height = _minimum_size(child, by_id)
             size = minimum_height if axis == "height" else minimum_width
             if size is None:
+                size = _resolved_size(child, axis, component)
+            if size is None:
                 return
-            child_sizes.append((child, size))
-        required = sum(size for _, size in child_sizes)
-        required += _item_margin(styles) * max(len(child_sizes) - 1, 0)
+            child_styles = _styles(child)
+            declared_child = _resolved_size(child, axis, component)
+            weight = _finite_number(child_styles.get("layoutWeight"))
+            if declared_child is None and weight is not None and weight > 0.0:
+                weighted_children.append((child, size, weight))
+                weight_total += weight
+                continue
+            resolved = declared_child or size
+            child_sizes.append((child, resolved))
+            fixed_required += resolved
+        margin = _component_item_margin(component) * max(len(children) - 1, 0)
+        remaining = max(available - fixed_required - margin, 0.0)
+        required = fixed_required + margin
+        if weighted_children:
+            for _child, minimum, weight in weighted_children:
+                allocated = remaining * weight / weight_total
+                required += max(minimum, allocated)
         if required <= available:
             return
         overflow = required - available
-        conflict_ids = [child.get("id") for child, _ in child_sizes]
+        conflict_ids = [child.get("id") for child, _, _ in weighted_children]
+        conflict_ids.extend(child.get("id") for child, _ in child_sizes)
         reporter.add(
             "error",
             "LAYOUT.LINEAR_CONTENT_OVERFLOW",

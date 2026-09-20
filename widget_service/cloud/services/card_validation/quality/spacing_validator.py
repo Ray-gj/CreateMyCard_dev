@@ -164,5 +164,3 @@ class SpacingValidator(BaseValidator):
         if value is None:
             return False
         return spacing_tuple(value) == (expected, expected, expected, expected)
-
-\n

@@ -50,6 +50,16 @@ class _Slot:
     vertical: tuple[float, float] | None
 
 
+@dataclass(frozen=True)
+class _SizeReport:
+    component_id: str
+    component_type: str
+    width: float | None
+    height: float | None
+    source: str
+    children: tuple[_SizeReport, ...] = ()
+
+
 def _styles(component: dict[str, Any]) -> dict[str, Any]:
     value = component.get("styles")
     return value if isinstance(value, dict) else {}
@@ -212,6 +222,107 @@ def _text_minimum_height(component: dict[str, Any]) -> float | None:
     return font_size * 1.2 * lines
 
 
+def _size_source(component: dict[str, Any], axis: str, declared: float | None) -> str:
+    if declared is not None:
+        return "declared"
+    if component.get("component") == "Text" and axis == "height":
+        return "fontSize"
+    if component.get("component") == "Button" and axis == "height":
+        return "fontSize"
+    return "children"
+
+
+def _minimum_size_report(
+    component: dict[str, Any],
+    by_id: dict[str, dict[str, Any]],
+    visiting: set[str] | None = None,
+) -> _SizeReport:
+    styles = _styles(component)
+    declared_width = _declared_size(component, "width")
+    declared_height = _declared_size(component, "height")
+    kind = str(component.get("component") or "unknown")
+    component_id = str(component.get("id") or "unknown")
+    if kind == "Text":
+        return _SizeReport(
+            component_id,
+            kind,
+            declared_width,
+            _text_minimum_height(component),
+            _size_source(component, "height", declared_height),
+        )
+    if kind == "Button":
+        height = declared_height or _text_minimum_height(component)
+        return _SizeReport(
+            component_id,
+            kind,
+            declared_width,
+            height,
+            _size_source(component, "height", declared_height),
+        )
+    children = _children(component, by_id)
+    current_id = component.get("id")
+    active = set() if visiting is None else set(visiting)
+    if isinstance(current_id, str):
+        if current_id in active:
+            return _SizeReport(component_id, kind, declared_width, declared_height, "cycle")
+        active.add(current_id)
+    reports = tuple(_minimum_size_report(child, by_id, active) for child in children)
+    child_widths = [item.width for item in reports if item.width is not None]
+    child_heights = [item.height for item in reports if item.height is not None]
+    margin = _component_item_margin(component) * max(len(children) - 1, 0)
+    width = declared_width
+    height = declared_height
+    if kind == "Column":
+        if width is None and len(child_widths) == len(children):
+            width = max(child_widths) + _padding(styles, "left") + _padding(styles, "right")
+        if height is None and len(child_heights) == len(children):
+            height = (
+                sum(child_heights)
+                + margin
+                + _padding(styles, "top")
+                + _padding(styles, "bottom")
+            )
+    elif kind == "Row":
+        if width is None and len(child_widths) == len(children):
+            width = (
+                sum(child_widths)
+                + margin
+                + _padding(styles, "left")
+                + _padding(styles, "right")
+            )
+        if height is None and len(child_heights) == len(children):
+            height = max(child_heights) + _padding(styles, "top") + _padding(styles, "bottom")
+    return _SizeReport(
+        component_id,
+        kind,
+        width,
+        height,
+        _size_source(component, "height", declared_height),
+        reports,
+    )
+
+
+def _minimum_size_issue_targets(report: _SizeReport, axis: str) -> list[dict[str, Any]]:
+    """Return the deepest children that can be adjusted without restructuring."""
+    if not report.children:
+        adjustable = report.component_type in {"Text", "Button"} and report.source == "fontSize"
+        return [
+            {
+                "component": report.component_id,
+                "type": report.component_type,
+                "adjustable": adjustable,
+                "sizeSource": report.source,
+            }
+        ]
+    targets: list[dict[str, Any]] = []
+    for child in report.children:
+        child_size = child.height if axis == "height" else child.width
+        if child_size is None:
+            continue
+        targets.extend(_minimum_size_issue_targets(child, axis))
+    return targets
+
+
 def _minimum_size(
     component: dict[str, Any],
     by_id: dict[str, dict[str, Any]],
@@ -371,6 +482,17 @@ class LayoutSafetyValidator(BaseValidator):
         if required <= available:
             return
         overflow = required - available
+        size_report = _minimum_size_report(component, by_id)
+        issue_targets = _minimum_size_issue_targets(size_report, axis)
+        adjustable_targets = [
+            item["component"] for item in issue_targets if item["adjustable"]
+        ]
+        responsible_subtrees: list[str] = []
+        if child_sizes:
+            largest_child = max(child_sizes, key=lambda item: item[1])
+            largest_id = largest_child[0].get("id")
+            if isinstance(largest_id, str):
+                responsible_subtrees.append(largest_id)
         conflict_ids = [child.get("id") for child, _, _ in weighted_children]
         conflict_ids.extend(child.get("id") for child, _, _ in child_sizes)
         space_ledger = []
@@ -436,6 +558,9 @@ class LayoutSafetyValidator(BaseValidator):
                 "overflow": overflow,
                 "children": conflict_ids,
                 "repairKind": "layout",
+                "responsibleSubtree": responsible_subtrees,
+                "recommendedEditTargets": adjustable_targets,
+                "sizeSources": issue_targets,
                 "spaceLedger": {
                     "axis": axis,
                     "containerSize": declared,
@@ -458,8 +583,9 @@ class LayoutSafetyValidator(BaseValidator):
             ),
             fix_hint=(
                 f"请调整 {kind} {component.get('id')} 的固定尺寸、padding、itemMargin "
-                "或子节点布局，确保文字和按钮的最小内容尺寸能够完整容纳。"
-                "不要仅通过裁剪、隐藏内容或盲目增加 flexShrink 消除问题。"
+                "或子节点布局，优先处理 recommendedEditTargets 中由 fontSize 推导高度的文字。"
+                "如果没有可调整文字，再处理局部间距或固定尺寸；保持其它子节点和父级结构不变。"
+                "不要删除必需内容，也不要通过裁剪、隐藏内容或盲目增加 flexShrink 消除问题。"
             ),
             source="layout-safety",
         )

@@ -242,3 +242,36 @@ def test_resolves_match_parent_for_row_child() -> None:
     reporter = validate_card(dsl_text=_dsl(components))
 
     assert reporter.has_code("LAYOUT.LINEAR_CONTENT_OVERFLOW")
+
+
+def test_overflow_feedback_identifies_font_size_leaf_as_local_edit_target() -> None:
+    components = [
+        _component(
+            "root",
+            "Column",
+            children=["a", "b", "c"],
+            itemMargin=4,
+            styles={"width": 136, "height": 100, "padding": 8},
+        ),
+        _component("a", "Text", styles={"height": 16, "fontSize": 12}, content="标题"),
+        _component("b", "Column", children=["b1", "b2", "b3"], itemMargin=2, styles={"width": 136}),
+        _component("b1", "Text", styles={"fontSize": 32, "maxLines": 1}, content="主数值"),
+        _component("b2", "Text", styles={"height": 18, "fontSize": 14}, content="说明"),
+        _component("b3", "Button", styles={"width": 100, "height": 32}, label="查看"),
+        _component("c", "Text", styles={"height": 16, "fontSize": 12}, content="底部"),
+    ]
+
+    reporter = validate_card(dsl_text=_dsl(components))
+    diagnostic = next(
+        item
+        for item in reporter.diagnostics
+        if item.code == "LAYOUT.LINEAR_CONTENT_OVERFLOW"
+        and item.actual.get("container") == "root"
+    )
+
+    assert "b1" in diagnostic.actual["recommendedEditTargets"]
+    assert diagnostic.actual["sizeSources"]
+    assert "fontSize" in {
+        item["sizeSource"] for item in diagnostic.actual["sizeSources"] if item["component"] == "b1"
+    }
+    assert "优先处理" in diagnostic.fix_hint

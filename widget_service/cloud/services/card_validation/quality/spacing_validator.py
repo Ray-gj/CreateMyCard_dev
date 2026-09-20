@@ -15,19 +15,7 @@ from .common import (
 class SpacingValidator(BaseValidator):
     stage = "quality"
     name = "spacing"
-    allowed = frozenset({0, 2, 4, 6, 8, 10, 12, 14, 16})
-
     def validate(self, context: Any, rules: Any, reporter: Any) -> None:
-        configured_spacing = rules.layout.get("allowedSpacing") if rules is not None else None
-        allowed = self.allowed
-        if isinstance(configured_spacing, list):
-            values: set[float] = set()
-            for value in configured_spacing:
-                if isinstance(value, bool) or not isinstance(value, (int, float)):
-                    continue
-                values.add(float(value))
-            if values:
-                allowed = frozenset(values)
         default_padding = 12
         if rules is not None:
             configured_padding = numeric(rules.layout.get("defaultPadding"))
@@ -63,13 +51,6 @@ class SpacingValidator(BaseValidator):
                     padding,
                     default_padding,
                 )
-            gap_field = "space" if component.get("component") == "List" else "itemMargin"
-            self._check_spacing_value(
-                reporter,
-                component_pointer(index, gap_field),
-                component.get(gap_field),
-                allowed,
-            )
             self._check_explicit_width(
                 reporter,
                 index,
@@ -184,28 +165,4 @@ class SpacingValidator(BaseValidator):
             return False
         return spacing_tuple(value) == (expected, expected, expected, expected)
 
-    @staticmethod
-    def _check_spacing_value(
-        reporter: Any,
-        pointer: str,
-        value: Any,
-        allowed: frozenset[float],
-    ) -> None:
-        if value is None:
-            return
-        if isinstance(value, dict):
-            values = [numeric(item) for item in value.values()]
-            if not values:
-                values = [None]
-        else:
-            values = [numeric(value)]
-        invalid = any(item is None or item not in allowed for item in values)
-        if invalid:
-            add(
-                reporter,
-                "SPACING.SCALE",
-                pointer,
-                "间距不在登记档位中。",
-                value,
-                sorted(allowed),
-            )
+\n

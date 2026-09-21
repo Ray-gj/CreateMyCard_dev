@@ -15,6 +15,7 @@ from .common import (
 class SpacingValidator(BaseValidator):
     stage = "quality"
     name = "spacing"
+
     def validate(self, context: Any, rules: Any, reporter: Any) -> None:
         default_padding = 12
         if rules is not None:
@@ -91,8 +92,13 @@ class SpacingValidator(BaseValidator):
         if component.get("component") != "Button":
             return
         styles = component.get("styles")
-        padding = spacing_tuple(styles.get("padding")) if isinstance(styles, dict) else None
-        if padding is not None and (padding[1] < 8 or padding[3] < 8):
+        if not isinstance(styles, dict):
+            return
+        padding = SpacingValidator._static_horizontal_padding(styles.get("padding"))
+        if padding is None:
+            return
+        left, right = padding
+        if left < 8 or right < 8:
             add(
                 reporter,
                 "SPACING.BUTTON_CONTENT_PADDING",
@@ -101,6 +107,21 @@ class SpacingValidator(BaseValidator):
                 padding,
                 ">= 8vp",
             )
+
+    @staticmethod
+    def _static_horizontal_padding(value: Any) -> tuple[float, float] | None:
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            left = numeric(value.get("left"))
+            right = numeric(value.get("right"))
+            if left is None or right is None:
+                return None
+            return left, right
+        number = numeric(value)
+        if number is None:
+            return None
+        return number, number
 
     @staticmethod
     def _safe_root_id(context: Any) -> str | None:

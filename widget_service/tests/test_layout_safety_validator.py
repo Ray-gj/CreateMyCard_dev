@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-"""线性布局安全校验回归。"""
+"""兄弟组件矩形重叠校验回归。"""
 
 import json
 from typing import Any
-
-import pytest
 
 from services.card_validation import validate_card
 
@@ -57,221 +55,172 @@ def _component(
     return component
 
 
-def _title_area() -> list[dict[str, Any]]:
-    return [
-        _component(
-            "title_area",
-            "Row",
-            children=["title_text"],
-            styles={"width": 136, "height": 20},
-        ),
-        _component(
-            "title_text",
-            "Text",
-            styles={"width": 112, "fontSize": 12, "maxLines": 1},
-            content="标题",
-        ),
-    ]
-
-
-def _text(identifier: str, font_size: int) -> dict[str, Any]:
+def _text(identifier: str, width: float = 80, height: float = 20) -> dict[str, Any]:
     return _component(
         identifier,
         "Text",
-        styles={"fontSize": font_size, "maxLines": 1},
-        content="内容",
+        styles={"width": width, "height": height, "fontSize": 12},
+        content=identifier,
     )
 
 
-def _button(identifier: str) -> dict[str, Any]:
-    return _component(
-        identifier,
-        "Button",
-        styles={"width": "matchParent", "height": 36},
-        label="查看详情",
-    )
-
-
-def _first_components() -> list[dict[str, Any]]:
+def test_detects_overlapping_content_branches_in_stack() -> None:
     components = [
         _component(
             "root",
-            "Column",
-            children=["title_area", "value_group", "action_area"],
-            itemMargin=8,
-            styles={"width": 160, "height": 160, "padding": 12},
+            "Stack",
+            children=["background", "primary", "secondary"],
+            styles={"width": 136, "height": 100, "alignContent": "center"},
         ),
-        *_title_area(),
-        _component(
-            "value_group",
-            "Column",
-            children=["value_num", "value_unit", "start_time"],
-            itemMargin=2,
-            styles={"width": 136, "height": 64},
-        ),
-        _text("value_num", 38),
-        _text("value_unit", 12),
-        _text("start_time", 12),
-        _component(
-            "action_area",
-            "Column",
-            children=["action_unit"],
-            styles={"width": 136, "height": 36},
-        ),
-        _button("action_unit"),
+        _component("background", "Image", styles={"width": 136, "height": 100}),
+        _text("primary"),
+        _text("secondary"),
     ]
-    return components
+
+    reporter = validate_card(dsl_text=_dsl(components))
+
+    diagnostics = [
+        item for item in reporter.diagnostics if item.code == "LAYOUT.SIBLING_OVERLAP"
+    ]
+    assert len(diagnostics) == 1
+    diagnostic = diagnostics[0]
+    assert diagnostic.actual["parent"] == "root"
+    assert diagnostic.actual["children"] == ["primary", "secondary"]
+    assert diagnostic.actual["intersection"] == {
+        "x": 28.0,
+        "y": 40.0,
+        "width": 80.0,
+        "height": 20.0,
+    }
 
 
-def _second_components() -> list[dict[str, Any]]:
+def test_fusion_background_is_ignored_but_foreground_is_checked() -> None:
     components = [
         _component(
             "root",
             "Stack",
             children=["fusionBallBackground", "__genui_render_component__root"],
-            styles={"width": 160, "height": 160},
+            styles={"width": 160, "height": 160, "alignContent": "topStart"},
         ),
         _component(
             "fusionBallBackground",
             "Stack",
+            children=["fusionBallLarge", "fusionBallGlassLayer"],
             styles={"width": "100%", "height": "100%"},
+        ),
+        _component(
+            "fusionBallLarge",
+            "Divider",
+            styles={"width": 160, "height": 160},
+        ),
+        _component(
+            "fusionBallGlassLayer",
+            "Divider",
+            styles={"width": 160, "height": 160},
         ),
         _component(
             "__genui_render_component__root",
             "Column",
-            children=["title_area", "value_group", "action_area"],
+            children=["title", "value"],
             itemMargin=8,
-            styles={"width": "matchParent", "height": "matchParent", "padding": 12},
+            styles={"width": "matchParent", "height": "matchParent"},
         ),
-        *_title_area(),
-        _component(
-            "value_group",
-            "Column",
-            children=["value_num", "value_unit", "aux_text"],
-            itemMargin=2,
-            styles={"width": 136, "layoutWeight": 1},
-        ),
-        _text("value_num", 38),
-        _text("value_unit", 12),
-        _text("aux_text", 12),
-        _component(
-            "action_area",
-            "Column",
-            children=["action"],
-            styles={"width": 136, "height": 36},
-        ),
-        _button("action"),
-    ]
-    return components
-
-
-def _third_components() -> list[dict[str, Any]]:
-    components = [
-        _component(
-            "root",
-            "Column",
-            children=["title_area", "content_area", "action_area"],
-            itemMargin=4,
-            styles={"width": 160, "height": 160, "padding": 12},
-        ),
-        *_title_area(),
-        _component(
-            "content_area",
-            "Column",
-            children=["value_row", "aux_text"],
-            itemMargin=4,
-            styles={"width": 136, "layoutWeight": 1},
-        ),
-        _component("value_row", "Row", children=["value_num", "value_unit"], styles={"width": 136}),
-        _text("value_num", 30),
-        _text("value_unit", 12),
-        _text("aux_text", 12),
-        _component(
-            "action_area",
-            "Column",
-            children=["cta_save", "cta_nav"],
-            itemMargin=8,
-            styles={"width": 136},
-        ),
-        _button("cta_save"),
-        _button("cta_nav"),
-    ]
-    return components
-
-
-@pytest.mark.parametrize(
-    ("components", "container", "required"),
-    [
-        (_first_components(), "value_group", 78.4),
-        (_second_components(), "__genui_render_component__root", 150.4),
-        (_third_components(), "root", 162.4),
-    ],
-)
-def test_detects_linear_content_overflow(
-    components: list[dict[str, Any]],
-    container: str,
-    required: float,
-) -> None:
-    reporter = validate_card(dsl_text=_dsl(components))
-    diagnostics = [
-        item
-        for item in reporter.diagnostics
-        if item.code == "LAYOUT.LINEAR_CONTENT_OVERFLOW"
-        and item.actual.get("container") == container
-    ]
-
-    assert len(diagnostics) == 1
-    assert diagnostics[0].actual.get("required") == pytest.approx(required)
-
-
-def test_resolves_match_parent_for_row_child() -> None:
-    components = [
-        _component(
-            "root",
-            "Row",
-            children=["left", "right"],
-            itemMargin=8,
-            styles={"width": 100, "height": 40, "padding": 4},
-        ),
-        _component("left", "Column", children=["text"], styles={"width": "matchParent"}),
-        _text("text", 12),
-        _component("right", "Column", children=["button"], styles={"width": 60}),
-        _button("button"),
+        _text("title", height=20),
+        _text("value", height=20),
     ]
 
     reporter = validate_card(dsl_text=_dsl(components))
 
-    assert reporter.has_code("LAYOUT.LINEAR_CONTENT_OVERFLOW")
+    assert not reporter.has_code("LAYOUT.SIBLING_OVERLAP")
 
 
-def test_overflow_feedback_identifies_font_size_leaf_as_local_edit_target() -> None:
+def test_hidden_siblings_do_not_participate() -> None:
     components = [
         _component(
             "root",
-            "Column",
-            children=["a", "b", "c"],
-            itemMargin=4,
-            styles={"width": 136, "height": 100, "padding": 8},
+            "Stack",
+            children=["hidden", "visible"],
+            styles={"width": 136, "height": 100},
         ),
-        _component("a", "Text", styles={"height": 16, "fontSize": 12}, content="标题"),
-        _component("b", "Column", children=["b1", "b2", "b3"], itemMargin=2, styles={"width": 136}),
-        _component("b1", "Text", styles={"fontSize": 32, "maxLines": 1}, content="主数值"),
-        _component("b2", "Text", styles={"height": 18, "fontSize": 14}, content="说明"),
-        _component("b3", "Button", styles={"width": 100, "height": 32}, label="查看"),
-        _component("c", "Text", styles={"height": 16, "fontSize": 12}, content="底部"),
+        _component(
+            "hidden",
+            "Text",
+            styles={"width": 80, "height": 20, "visibility": "hidden"},
+            content="隐藏",
+        ),
+        _text("visible"),
     ]
 
     reporter = validate_card(dsl_text=_dsl(components))
-    diagnostic = next(
-        item
-        for item in reporter.diagnostics
-        if item.code == "LAYOUT.LINEAR_CONTENT_OVERFLOW"
-        and item.actual.get("container") == "root"
+
+    assert not reporter.has_code("LAYOUT.SIBLING_OVERLAP")
+
+
+def test_unknown_geometry_is_skipped() -> None:
+    components = [
+        _component(
+            "root",
+            "Stack",
+            children=["first", "second"],
+            styles={"width": 136, "height": 100},
+        ),
+        _component("first", "Text", content="一"),
+        _component("second", "Text", content="二"),
+    ]
+
+    reporter = validate_card(dsl_text=_dsl(components))
+
+    assert not reporter.has_code("LAYOUT.SIBLING_OVERLAP")
+
+
+def test_match_parent_root_uses_cardspec_canvas_size() -> None:
+    components = [
+        _component(
+            "root",
+            "Stack",
+            children=["first", "second"],
+            styles={"width": "matchParent", "height": "matchParent"},
+        ),
+        _text("first"),
+        _text("second"),
+    ]
+    cardspec = {
+        "title": "测试",
+        "description": "重叠校验",
+        "suggestSize": "2x2",
+        "dataBindings": [],
+    }
+
+    reporter = validate_card(
+        dsl_text=_dsl(components),
+        cardspec=json.dumps(cardspec, ensure_ascii=False),
     )
 
-    assert "b1" in diagnostic.actual["recommendedEditTargets"]
-    assert diagnostic.actual["sizeSources"]
-    assert "fontSize" in {
-        item["sizeSource"] for item in diagnostic.actual["sizeSources"] if item["component"] == "b1"
-    }
-    assert "优先处理" in diagnostic.fix_hint
+    assert reporter.has_code("LAYOUT.SIBLING_OVERLAP")
+
+
+def test_linear_children_are_checked_recursively_when_geometry_is_known() -> None:
+    components = [
+        _component(
+            "root",
+            "Column",
+            children=["content"],
+            styles={"width": 136, "height": 100},
+        ),
+        _component(
+            "content",
+            "Stack",
+            children=["first", "second"],
+            styles={"width": 136, "height": 100},
+        ),
+        _text("first"),
+        _text("second"),
+    ]
+
+    reporter = validate_card(dsl_text=_dsl(components))
+
+    diagnostic = next(
+        item for item in reporter.diagnostics if item.code == "LAYOUT.SIBLING_OVERLAP"
+    )
+    assert diagnostic.actual["parent"] == "content"
+    assert diagnostic.fix_hint.startswith("请调整 first 和 second")

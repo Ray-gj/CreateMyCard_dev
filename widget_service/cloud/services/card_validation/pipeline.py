@@ -7,13 +7,11 @@ Owns the static list of built-in validators and the stage/short-circuit logic.
 subsystem a given validator belongs to.
 
 The online variant keeps the protocol and semantic stages as its core pipeline.
-The quality stage currently hosts deterministic contrast checks; broader design
-contract checks remain the responsibility of the ``generateWidgetCard`` service.
+The quality stage hosts deterministic contrast and sibling-overlap checks; broader
+design contract checks remain the responsibility of the ``generateWidgetCard`` service.
 """
 
 from __future__ import annotations
-
-import logging
 
 from .aesthetic_baseline_validator import AestheticBaselineValidator
 from .asset_validator import AssetValidator
@@ -29,8 +27,6 @@ from .effective_capability_validator import EffectiveCapabilityValidator
 from .expression_validator import ExpressionValidator
 from .protocol_validator import ProtocolValidator
 from .quality.layout_safety_validator import LayoutSafetyValidator
-
-_LOGGER = logging.getLogger(__name__)
 
 STATIC_VALIDATORS = [
     ProtocolValidator(),
@@ -81,9 +77,6 @@ def run_pipeline(
             return
         if stop_on_stage_error and current_stage == "quality" and reporter.error_count:
             return
-        if current_stage == "quality" and context.has_fusion_template_root():
-            _LOGGER.info("quality_validation_skipped reason=template_root")
-            continue
         for validator in validators:
             if validator.stage == current_stage:
                 validator.validate(context, rules, reporter)

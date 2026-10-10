@@ -7,8 +7,9 @@ Owns the static list of built-in validators and the stage/short-circuit logic.
 subsystem a given validator belongs to.
 
 The online variant keeps the protocol and semantic stages as its core pipeline.
-The quality stage currently hosts deterministic contrast checks; broader design
-contract checks remain the responsibility of the ``generateWidgetCard`` service.
+The quality stage hosts deterministic design-contract observations.  Quality
+diagnostics are intentionally kept separate from protocol and semantic failures
+by the artifact validation boundary.
 """
 
 from __future__ import annotations
@@ -28,6 +29,19 @@ from .display_unit_validator import DisplayUnitValidator
 from .effective_capability_validator import EffectiveCapabilityValidator
 from .expression_validator import ExpressionValidator
 from .protocol_validator import ProtocolValidator
+from .quality.asset_quality_validator import AssetQualityValidator
+from .quality.color_validator import ColorValidator
+from .quality.copy_validator import CopyValidator
+from .quality.density_validator import DensityValidator
+from .quality.fusion_readability_validator import FusionReadabilityValidator
+from .quality.gradient_validator import GradientValidator
+from .quality.icon_validator import IconValidator
+from .quality.layout_2x4_validator import Layout2x4Validator
+from .quality.layout_safety_validator import LayoutSafetyValidator
+from .quality.shape_validator import ShapeValidator
+from .quality.slot_validator import SlotValidator
+from .quality.spacing_validator import SpacingValidator
+from .quality.typography_validator import TypographyValidator
 
 _LOGGER = logging.getLogger(__name__)
 
